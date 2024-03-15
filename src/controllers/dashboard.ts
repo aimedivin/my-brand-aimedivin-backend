@@ -1,23 +1,29 @@
-import {RequestHandler} from 'express';
-import Blog from '../model/blogs';
-import {Types } from 'mongoose';
+import { RequestHandler } from 'express';
+import { validationResult } from 'express-validator'
+import Blog from '../model/blog';
+import { Types } from 'mongoose';
 
-
-// Interface for the blog
-// interface myBlog {
-//     _id: Types.ObjectId;
-//     title: string;
-//     description: string;
-//     imageUrl: string;
-// }
+// Custom Error Class
+class CustomError {
+    message: string;
+    statusCode: number;
+    constructor(message: string, statusCode: number) {
+        this.message = message
+        this.statusCode = statusCode
+    }
+}
 
 // Fetching All blogs
 const getBlogs: RequestHandler = async (req, res) => {
     try {
-        const blogs = await Blog.find({},{"title":1, "description": 1, "imageUrl":1});
-        
-        res.status(200).json(blogs);
-    } catch(err) {
+        const blogs = await Blog.find();
+
+        res.status(200)
+            .json({
+                message: 'Blogs fetched successfully',
+                blogs: blogs
+            });
+    } catch (err) {
         console.log("Error");
     }
 };
@@ -29,105 +35,169 @@ const getBlog: RequestHandler = async (req, res) => {
         const blogId = req.params.blogId;
         const blog = await Blog.findById(blogId);
         if (blog)
-            return res.status(200).json(blog);
-        res.status(400).json({message: "blog not found"})
+            return res.status(200)
+                .json({
+                    message: 'Blog fetched successfully',
+                    blog: blog
+                });
+        res.status(404)
+            .json({
+                message: "Blog not found"
+            });
     } catch (err) {
-        res.status(400).json({message: "blog not found"})
+        res.status(500).json({ message: "Server error" })
         console.log(err);
     }
 }
 
 // Updating existing Blog
-const postEditBlog: RequestHandler = async (req, res) => {
-    const blogId: string = req.body.blogId;
-    const newTitle: string = req.body.title;
-    const newDescription: string = req.body.description;
-    const newImageUrl: string = req.body.imageUrl;
-
+const updateBlog: RequestHandler = async (req, res) => {
     try {
+        const blogId: string = req.params.blogId;
+
+        const validationError = validationResult(req);
+
+        if (!validationError.isEmpty()) {
+            const error = new CustomError('Validation failed, Invalid data', 422);
+            throw error;
+        }
+
+        const newTitle: string = req.body.title;
+        const newDescription: string = req.body.description;
+        const newImageUrl: string = req.body.imageUrl;
+
         // Check if provided details belong to another blog 
         const existingBlog = await Blog.findOne({
             $and: [
-                {_id: { $ne: blogId}},
-                {$or: [
-                    {title: { $eq: newTitle}},
-                    {description: {$eq: newDescription}},
-                    {imageUrl: {$eq: newImageUrl}}
-                ]}
+                { _id: { $ne: blogId } },
+                {
+                    $or: [
+                        { title: { $eq: newTitle } },
+                        { description: { $eq: newDescription } },
+                        { imageUrl: { $eq: newImageUrl } }
+                    ]
+                }
             ]
         });
         console.log(existingBlog);
-        
-        if (existingBlog) return res.status(409).json({message: "The details provided belong to another blog in the database"});
+
+        if (existingBlog)
+            return res.status(409)
+                .json({
+                    message: "The details provided belong to another blog in the database"
+                });
 
         const blog = await Blog.findById(blogId);
-        
-        if(blog) {
+
+        if (blog) {
             blog.title = newTitle;
             blog.description = newDescription;
             blog.imageUrl = newImageUrl;
 
             blog.save()
-            return res.status(200).json(blog);
-        } 
-        return res.status(409).json({message: "blog to update is not found"})
+            return res.status(200)
+                .json({
+                    message: "Post updated",
+                    blog: blog
+                });
+        }
+        return res.status(404)
+            .json({
+                message: "blog to update is not found"
+            })
     } catch (err) {
-        res.json({message: "Blog updating Error"})
+        if (err instanceof CustomError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            res.status(500).json();
+        }
     }
 }
 
 
 // Creating new blog
-const postBlog: RequestHandler = async (req, res) => {
+const postBlog: RequestHandler = async (req, res, next) => {
     try {
-        const {title, description, imageUrl} = req.body;
+        const validationError = validationResult(req);
+
+        if (!validationError.isEmpty()) {
+            const error = new CustomError('Validation failed, Invalid data', 422);
+
+            throw error;
+        }
+        const { title, description, imageUrl } = req.body;
 
         //Check if blog exist
         const existingBlog = await Blog.findOne({
-        $and: [
-            {title},
-            {$or: [
-                {description},
-                {imageUrl}
-            ]}
-        ]
+            $and: [
+                { title },
+                {
+                    $or: [
+                        { description },
+                        { imageUrl }
+                    ]
+                }
+            ]
         })
-        
-        if (existingBlog) return res.status(409).json({"message": "Blog currently exist in database"});
-        //Create new blog if doesn't exist
 
-        const newBlog = new Blog(req.body);
-        await newBlog.save(); 
-        
-        res.status(201).json(newBlog.toObject());
-        
-    } catch(err) {
-        console.log(err);
-        res.status(500).json({message: "Error"})
+        if (existingBlog) return res
+            .status(409)
+            .json({
+                "message": "Blog currently exist in database"
+            });
+        //Create new blog if doesn't exist
+        const newBlog = new Blog(
+            {
+                title: title,
+                description: description,
+                imageUrl: imageUrl
+            }
+        );
+        await newBlog.save();
+
+        res.status(201)
+            .json({
+                message: 'Blog created successfully!',
+                blog: newBlog.toObject()
+            });
+    }
+    catch (err) {
+        if (err instanceof CustomError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            res.status(500).json();
+        }
     }
 };
 
 // Deleting blog
-const postDeleteBlog: RequestHandler = async (req, res) => {
-    const {blogId} = req.body
+const deleteBlog: RequestHandler = async (req, res) => {
+    const blogId= req.params.blogId;
+    
     try {
         let result = await Blog.findByIdAndDelete(blogId);
-        console.log(result);
         if (result)
-            return res.status(200).json({message: "Blog deleted successfully"});
-        return res.status(404).json({message: "Blog not found"});
+            return res.status(200)
+                .json({
+                    message: "Blog deleted successfully"
+                });
+
+        return res.status(404)
+            .json({
+                message: "Blog not found"
+            });
     } catch (error) {
         console.log(error);
-        res.status(400).json({message: "Blog deleting Error"});
-        
+        res.status(400).json({ message: "Blog deleting Error" });
+
     }
-} 
+}
 
 export default {
     getBlogs,
     getBlog,
-    postEditBlog,
+    updateBlog,
     postBlog,
-    postDeleteBlog
+    deleteBlog
 }
 
