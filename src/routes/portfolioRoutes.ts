@@ -13,6 +13,9 @@ router.get("/blog/:blogId", portfolioController.getBlog);
 // Blog comment 
 router.post('/blog/:blogId/comment', isAuth, portfolioController.postComment);
 
+// Blog like 
+router.post('/blog/:blogId/like', isAuth, portfolioController.postLike);
+
 // Contact form message
 router.post('/message', portfolioController.postMessage);
 

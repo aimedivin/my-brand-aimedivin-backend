@@ -85,6 +85,39 @@ const postComment: RequestHandler = async (req, res) => {
 }
 
 
+//-------------------- Blog Like ------------------
+const postLike: RequestHandler = async (req, res) => {
+    try {
+
+        const { description } = req.body;
+        const blogId = req.params.blogId
+        const userId = req.userId;
+
+        //Check if blog exist
+        const blog = await Blog.findById(blogId);
+        if (!blog) {
+            const error = new CustomError("This blog does not exist", 404);
+            throw error;
+        }
+
+        blog.likes = (blog.likes ? blog.likes : 0) + 1;
+        await blog.save();
+
+        res.status(200)
+            .json({
+                message: 'Like Added!'
+            });
+    }
+    catch (err) {
+        if (err instanceof CustomError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            res.status(500).json();
+        }
+    }
+}
+
+
 
 // Save Message
 const postMessage: RequestHandler = async (req, res) => {
@@ -102,5 +135,6 @@ export default {
     getBlogs,
     getBlog,
     postMessage,
-    postComment
+    postComment,
+    postLike
 }
