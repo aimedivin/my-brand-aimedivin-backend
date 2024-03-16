@@ -1,6 +1,7 @@
 import { RequestHandler } from "express"
 import { validationResult } from 'express-validator'
 import jwt from 'jsonwebtoken'
+import 'dotenv/config'
 
 import bcrypt from 'bcryptjs'
 import User from "../model/user";
@@ -20,7 +21,7 @@ const postSignUp: RequestHandler = async (req, res, next) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            const error = new CustomError('Validation failed', 422);
+            const error = new CustomError('Validation failed, Enter valid inputs', 422);
             throw error;
         }
         const name = req.body.name;
@@ -74,7 +75,7 @@ const login: RequestHandler = async (req, res, next) => {
             email: user.email,
             userId: user._id.toString()
         },
-            'thissecretthissecretthissecretthissecretthissecret',
+            `${process.env.JWT_SECRET}`,
             { expiresIn: '1h' }
         );
 

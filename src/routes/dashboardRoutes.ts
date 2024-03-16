@@ -1,15 +1,18 @@
-import { Router } from "express";
+import { Router, RequestHandler } from "express";
 import { body } from "express-validator";
+
 import dashboardController from "../controllers/dashboard";
+import {isAuth, isAuthAdmin} from '../middleware/isAuth'
 
 const router = Router();
 
-router.get("/blogs", dashboardController.getBlogs);
+router.get("/blogs", isAuthAdmin, dashboardController.getBlogs);
 
-router.get("/blog/:blogId", dashboardController.getBlog);
+router.get("/blog/:blogId", isAuthAdmin,dashboardController.getBlog);
 
 router.put(
     "/blog/:blogId",
+    isAuthAdmin,
     [
         body("title").trim().isLength({ min: 5 }),
         body("description").trim().isLength({ min: 5 }),
@@ -19,6 +22,7 @@ router.put(
 
 router.post(
     "/blog",
+    isAuthAdmin,
     [
         body("title").trim().isLength({ min: 5 }),
         body("description").trim().isLength({ min: 5 }),
@@ -26,6 +30,11 @@ router.post(
     dashboardController.postBlog
 );
 
-router.delete("/blog/:blogId", dashboardController.deleteBlog);
+router.delete("/blog/:blogId", isAuthAdmin, dashboardController.deleteBlog);
+
+// Users
+router.get("/Users", isAuthAdmin, dashboardController.getUsers);
+
+//router.get("/User", isAuthAdmin, dashboardController.deleteBlog);
 
 export default router;
