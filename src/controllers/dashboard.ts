@@ -2,9 +2,10 @@ import { RequestHandler } from 'express';
 import { validationResult } from 'express-validator'
 import Blog from '../model/blog';
 import { Types } from 'mongoose';
+import User from '../model/user';
 
 // Custom Error Class
-class CustomError {
+export class CustomError {
     message: string;
     statusCode: number;
     constructor(message: string, statusCode: number) {
@@ -172,8 +173,8 @@ const postBlog: RequestHandler = async (req, res, next) => {
 
 // Deleting blog
 const deleteBlog: RequestHandler = async (req, res) => {
-    const blogId= req.params.blogId;
-    
+    const blogId = req.params.blogId;
+
     try {
         let result = await Blog.findByIdAndDelete(blogId);
         if (result)
@@ -193,11 +194,33 @@ const deleteBlog: RequestHandler = async (req, res) => {
     }
 }
 
+// -------------- USERS ------------------
+
+const getUsers: RequestHandler = async (req, res) => {
+    try {
+        const users = await User.find();
+        if (users) {
+            res.status(200)
+                .json({
+                    message: "Users were retrieved successfully",
+                    users: users
+                })
+        }
+    } catch (err) {
+        res.status(500)
+            .json({
+                message: "Server Error"
+            })
+    }
+}
+
+// -------------- MESSAGE ---------------
 export default {
     getBlogs,
     getBlog,
     updateBlog,
     postBlog,
-    deleteBlog
+    deleteBlog,
+    getUsers
 }
 
