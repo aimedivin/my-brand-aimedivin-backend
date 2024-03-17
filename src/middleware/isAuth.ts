@@ -18,7 +18,7 @@ function authorizationCheck(req: Request) {
     const header = req.get('Authorization');
 
     if (!header) {
-        const error = new CustomError('Not authenticated', 401);
+        const error = new CustomError('Auth failed', 401);
         throw error;
     }
 
@@ -28,7 +28,7 @@ function authorizationCheck(req: Request) {
     decodedToken = jwt.verify(token, `${process.env.JWT_SECRET}`) as JwtPayload;
 
     if (!decodedToken) {
-        const error = new CustomError('Not authenticated', 401);
+        const error = new CustomError('Auth failed', 401);
         throw error;
     }
     return decodedToken;
@@ -43,7 +43,7 @@ export const isAuth: RequestHandler = (req, res, next) => {
     catch (err) {
         
         if ((err as Error).name === 'JsonWebTokenError' || (err as Error).name === 'TokenExpiredError') {
-            res.status(401).json({ message: 'Not authenticated' });
+            res.status(401).json({ message: 'Auth failed' });
         }
         else if (err instanceof CustomError) {
             res.status(err.statusCode).json({ message: err.message });
@@ -60,7 +60,7 @@ export const isAuthAdmin: RequestHandler = async(req, res, next) => {
         let user = await User.findById(decodedToken.userId);
         
         if(!user!.isAdmin) {
-            const error = new CustomError('User not authorized', 401);
+            const error = new CustomError('You\'re not authorized', 401);
             throw error;
         }
         next()
@@ -68,7 +68,7 @@ export const isAuthAdmin: RequestHandler = async(req, res, next) => {
     catch (err) {
         
         if ((err as Error).name === 'JsonWebTokenError' || (err as Error).name === 'TokenExpiredError') {
-            res.status(401).json({ message: 'Not authenticated' });
+            res.status(401).json({ message: 'Auth failed' });
         }
         else if (err instanceof CustomError) {
             res.status(err.statusCode).json({ message: err.message });

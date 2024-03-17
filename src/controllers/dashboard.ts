@@ -3,6 +3,7 @@ import { validationResult } from 'express-validator'
 import Blog from '../model/blog';
 import { Types } from 'mongoose';
 import User from '../model/user';
+import Comment from '../model/comment';
 
 // Custom Error Class
 export class CustomError {
@@ -174,15 +175,18 @@ const postBlog: RequestHandler = async (req, res, next) => {
 // Deleting blog
 const deleteBlog: RequestHandler = async (req, res) => {
     const blogId = req.params.blogId;
+    const userId = req.userId;
 
     try {
-        let result = await Blog.findByIdAndDelete(blogId);
-        if (result)
+        const result = await Blog.findByIdAndDelete(blogId);
+        if (result) {
+            const blogComments = await Comment.deleteMany({ blogId: blogId });
+
             return res.status(200)
                 .json({
-                    message: "Blog deleted successfully"
+                    message: `Blog and it's ${blogComments.deletedCount} comment(s) was deleted successfully `
                 });
-
+        }
         return res.status(404)
             .json({
                 message: "Blog not found"
