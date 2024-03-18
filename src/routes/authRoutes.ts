@@ -3,6 +3,7 @@ import { body } from "express-validator";
 import User from '../model/user';
 
 import authController from '../controllers/auth';
+import { isAuth } from '../middleware/isAuth';
 
 const router = Router();
 
@@ -27,6 +28,15 @@ router.post('/signup',
             .isEmpty()
     ],
     authController.postSignUp
+);
+
+router.put('/user/:userId', isAuth,
+    [
+        body('name').trim()
+            .not()
+            .isEmpty()
+    ],
+    authController.updateUser
 );
 
 router.post('/login', authController.login);
