@@ -33,8 +33,8 @@ router.post(
 router.delete("/blog/:blogId", isAuthAdmin, dashboardController.deleteBlog);
 
 // Users
-router.get("/Users", isAuthAdmin, dashboardController.getUsers);
+router.get("/users", isAuthAdmin, dashboardController.getUsers);
 
-//router.get("/User", isAuthAdmin, dashboardController.deleteBlog);
+//router.get("/user", isAuthAdmin, dashboardController.deleteBlog);
 
 export default router;
