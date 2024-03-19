@@ -4,8 +4,9 @@
   "description": "",
   "main": "./src/app.ts",
   "scripts": {
-    "start": "nodemon",
-    "test": "jest"
+    "devStart": "nodemon",
+    "build": "npm install && npx tsc",
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",

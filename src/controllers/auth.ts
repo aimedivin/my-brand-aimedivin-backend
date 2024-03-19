@@ -79,18 +79,55 @@ export class Auth {
                 { expiresIn: '1h' }
             );
 
-
-            res.status(200)
-                .json({
-                    token: token,
-                    userId: user._id.toString()
-                })
-        } catch (err) {
-            if (err instanceof CustomError) {
-                res.status(err.statusCode).json({ message: err.message });
-            } else {
-                res.status(500).json();
-            }
+        res.status(200)
+            .json({
+                token: token,
+                userId: user._id.toString()
+            })
+    } catch (err) {
+        if (err instanceof CustomError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            res.status(500).json({ Message: "Login Error" });
         }
     }
+}
+
+const updateUser: RequestHandler = async (req, res) => {
+    try {
+        const name = req.body.name;
+        const userIdParam = req.params.userId;
+        const userId = req.userId;
+        const validateResult = validationResult(req);
+
+        if (userIdParam != userId) {
+            const error = new CustomError('Not authorized', 401);
+            throw error;
+        }
+
+        if (!validateResult.isEmpty()) {
+            const error = new CustomError('Validation failed, Enter valid inputs', 422);
+            throw error;
+        }
+
+        const updatedDocument = await User.findByIdAndUpdate(userId, { $set: { name: name } }, { new: true })
+        res.status(200)
+            .json({
+                "Message": "User updated Successfully!",
+                "Updated User": updatedDocument
+            })
+
+    } catch (err) {
+        if (err instanceof CustomError) {
+            res.status(err.statusCode).json({ message: err.message });
+        } else {
+            res.status(500).json({ Message: "User Update Error", Error: err });
+        }
+    }
+}
+
+export default {
+    postSignUp,
+    login,
+    updateUser
 }

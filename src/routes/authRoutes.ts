@@ -10,6 +10,15 @@ const authController = new Auth();
 
 router.post('/signup', authController.postSignUp);
 
+router.put('/user/:userId', isAuth,
+    [
+        body('name').trim()
+            .not()
+            .isEmpty()
+    ],
+    authController.updateUser
+);
+
 router.post('/login', authController.login);
 
 export default router;
