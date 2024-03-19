@@ -93,7 +93,7 @@ export class Auth {
     }
 }
 
-const updateUser: RequestHandler = async (req, res) => {
+updateUser: RequestHandler = async (req, res) => {
     try {
         const name = req.body.name;
         const userIdParam = req.params.userId;
@@ -125,9 +125,4 @@ const updateUser: RequestHandler = async (req, res) => {
         }
     }
 }
-
-export default {
-    postSignUp,
-    login,
-    updateUser
 }
