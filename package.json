@@ -6,7 +6,7 @@
   "scripts": {
     "devStart": "nodemon",
     "build": "npm install && npx tsc",
-    "start": "node"
+    "start": "node dist/app.js"
   },
   "keywords": [],
   "author": "",
