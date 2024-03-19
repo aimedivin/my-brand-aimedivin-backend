@@ -1,14 +1,16 @@
 import { Router, RequestHandler } from "express";
 import { body } from "express-validator";
 
-import dashboardController from "../controllers/dashboard";
-import {isAuth, isAuthAdmin} from '../middleware/isAuth'
+import { Dashboard } from "../controllers/dashboard";
+import { isAuth, isAuthAdmin } from '../middleware/isAuth'
 
 const router = Router();
 
+const dashboardController = new Dashboard();
+
 router.get("/blogs", isAuthAdmin, dashboardController.getBlogs);
 
-router.get("/blog/:blogId", isAuthAdmin,dashboardController.getBlog);
+router.get("/blog/:blogId", isAuthAdmin, dashboardController.getBlog);
 
 router.put(
     "/blog/:blogId",

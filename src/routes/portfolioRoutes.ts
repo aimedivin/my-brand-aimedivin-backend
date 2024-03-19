@@ -1,11 +1,13 @@
 import { Router } from "express";
-import portfolioController from "../controllers/portfolio"
+import { Portfolio } from "../controllers/portfolio"
 
 import { isAuth, isAuthAdmin } from '../middleware/isAuth'
 
 const router = Router();
 
-// Getting Blogs
+const portfolioController = new Portfolio();
+
+// Getting Blog(s)
 router.get("/blogs", portfolioController.getBlogs);
 
 router.get("/blog/:blogId", portfolioController.getBlog);

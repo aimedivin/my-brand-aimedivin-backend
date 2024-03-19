@@ -10,7 +10,7 @@ import portfolioRoutes from './routes/portfolioRoutes';
 import authRoutes from './routes/authRoutes';
 
 
-const app = express();
+export const app = express();
 
 app.use(bodyParser.json())
 app.use(express.json());
