@@ -22,6 +22,11 @@ app.use((req, res, next) => {
     next();
 })
 
+// health check for the server
+app.get("/health", async (req: Request, res: Response) => {
+    res.status(200).json({ message: "health OK!" });
+});
+
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/auth', authRoutes);
