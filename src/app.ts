@@ -9,10 +9,14 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import portfolioRoutes from './routes/portfolioRoutes';
 import authRoutes from './routes/authRoutes';
 
+import swaggerJsDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express'
+import path from 'path';
+
+
 
 export const app = express();
 
-app.use(bodyParser.json())
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -35,6 +39,29 @@ app.use('/api/auth', authRoutes);
 //     console.log(error);
 //     res.status( error.statusCode).json({message: error.message})
 // })
+const options = {
+    definition: {
+        openapi: "3.0.0",
+        info: {
+            title: "My Brand Aime-Divin API Doc",
+            version: "0.1.0",
+            description: "A simple API application made with NodeJs, ExpressJs, MongoDB, Mongoose and documented with Swagger",
+            contact: {
+                name: "Aime Divin",
+                email: "aimedifi003@gmail.com"
+            }
+        },
+        servers: [
+            {
+                url: "http://localhost:3000"
+            }
+        ]
+    },
+    apis: [`${path.join(__dirname, 'routes', '*.ts')}`]
+}
+const specs = swaggerJsDoc(options);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
 mongoose.connect(process.env.MONGODB_CONNECTION_STRING as string)
     .then(() => {
