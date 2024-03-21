@@ -1,9 +1,10 @@
 import { RequestHandler } from 'express';
 import { validationResult } from 'express-validator'
 import Blog from '../model/blog';
-import { Types } from 'mongoose';
+import { Types, isValidObjectId } from 'mongoose';
 import User from '../model/user';
 import Comment from '../model/comment';
+import Message from '../model/message';
 
 // Custom Error Class
 export class CustomError {
@@ -23,11 +24,14 @@ export class Dashboard {
 
             res.status(200)
                 .json({
-                    message: 'Blogs fetched successfully',
+                    message: 'Blogs fetched successfully!',
                     blogs: blogs
                 });
         } catch (err) {
-            console.log("Error");
+            res.status(500)
+                .json({
+                    "message": "Internal server error"
+                })
         }
     };
 
@@ -36,6 +40,9 @@ export class Dashboard {
     getBlog: RequestHandler = async (req, res) => {
         try {
             const blogId = req.params.blogId;
+            if (!isValidObjectId(blogId)) {
+                return res.status(400).json({ message: "Invalid blog id" });
+            }
             const blog = await Blog.findById(blogId);
             if (blog)
                 return res.status(200)
@@ -57,6 +64,10 @@ export class Dashboard {
     updateBlog: RequestHandler = async (req, res) => {
         try {
             const blogId: string = req.params.blogId;
+
+            if (!isValidObjectId(blogId)) {
+                return res.status(400).json({ message: "Invalid blog id" });
+            }
 
             const validationError = validationResult(req);
 
@@ -100,7 +111,7 @@ export class Dashboard {
                 blog.save()
                 return res.status(200)
                     .json({
-                        message: "Post updated",
+                        message: "Blog updated successfully",
                         blog: blog
                     });
             }
@@ -112,7 +123,7 @@ export class Dashboard {
             if (err instanceof CustomError) {
                 res.status(err.statusCode).json({ message: err.message });
             } else {
-                res.status(500).json();
+                res.status(500).json({ message: "Server error" });
             }
         }
     }
@@ -146,7 +157,7 @@ export class Dashboard {
             if (existingBlog) return res
                 .status(409)
                 .json({
-                    "message": "Blog currently exist in database"
+                    "message": "The details provided belong to another blog in the database"
                 });
             //Create new blog if doesn't exist
             const newBlog = new Blog(
@@ -178,6 +189,10 @@ export class Dashboard {
         const blogId = req.params.blogId;
         const userId = req.userId;
 
+        if (!isValidObjectId(blogId)) {
+            return res.status(400).json({ message: "Invalid blog id" });
+        }
+
         try {
             const result = await Blog.findByIdAndDelete(blogId);
             if (result) {
@@ -193,8 +208,8 @@ export class Dashboard {
                     message: "Blog not found"
                 });
         } catch (error) {
-            console.log(error);
-            res.status(400).json({ message: "Blog deleting Error" });
+            res.status(500)
+                .json({ message: "Server rror" });
 
         }
     }
@@ -207,7 +222,7 @@ export class Dashboard {
             if (users) {
                 res.status(200)
                     .json({
-                        message: "Users were retrieved successfully",
+                        message: "Users were retrieved successfully!",
                         users: users
                     })
             }
@@ -216,6 +231,48 @@ export class Dashboard {
                 .json({
                     message: "Server Error"
                 })
+        }
+    }
+
+    // -------------- MESSAGES -----------------
+    getMessages: RequestHandler = async (req, res) => {
+        try {
+            const messages = await Message.find();
+
+            res.status(200)
+                .json({
+                    message: 'Message fetched successfully!',
+                    msg: messages
+                });
+        } catch (err) {
+            res.status(500)
+                .json({
+                    "message": "Internal server error"
+                })
+        }
+    }
+
+    // Fetching single message
+    getMessage: RequestHandler = async (req, res) => {
+        try {
+            const msgId = req.params.msgId;
+            if (!isValidObjectId(msgId)) {
+                return res.status(400).json({ message: "Invalid message id" });
+            }
+            const message = await Message.findById(msgId);
+            if (message)
+                return res.status(200)
+                    .json({
+                        message: 'Message fetched successfully',
+                        msg: message
+                    });
+            res.status(404)
+                .json({
+                    message: "Message not found"
+                });
+        } catch (err) {
+            res.status(500).json({ message: "Server error" })
+            console.log(err);
         }
     }
 }

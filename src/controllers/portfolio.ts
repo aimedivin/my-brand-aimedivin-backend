@@ -6,7 +6,7 @@ import Message from '../model/message';
 
 import { CustomError } from './dashboard';
 import Like from '../model/like';
-import mongoose, {isValidObjectId} from 'mongoose';
+import mongoose, { isValidObjectId } from 'mongoose';
 export class Portfolio {
     // Fetching All blogs
     getBlogs: RequestHandler = async (req, res) => {
@@ -15,11 +15,14 @@ export class Portfolio {
 
             res.status(200)
                 .json({
-                    message: 'Blogs fetched successfully',
+                    message: 'Blogs fetched successfully!',
                     blogs: blogs
                 });
         } catch (err) {
-            console.log("Error");
+            res.status(500)
+                .json({
+                    message: 'Internal server error!'
+                })
         }
     };
 
@@ -27,13 +30,13 @@ export class Portfolio {
     getBlog: RequestHandler = async (req, res) => {
         try {
             const blogId = req.params.blogId;
-            
+
             if (!isValidObjectId(blogId)) {
-                return res.status(404).json({ message: "Blog not found" });
+                return res.status(400).json({ message: "Invalid blog id" });
             }
-            
+
             const blog = await Blog.findById(blogId)
-            
+
             if (blog) {
                 return res.status(200)
                     .json({
@@ -46,8 +49,6 @@ export class Portfolio {
                     message: "Blog not found"
                 });
         } catch (err) {
-            console.log(err);
-            
             res.status(500).json({ message: "Server error" })
         }
     }
@@ -56,10 +57,15 @@ export class Portfolio {
     getComments: RequestHandler = async (req, res) => {
         try {
             const blogId = req.params.blogId
+
+            if (!isValidObjectId(blogId)) {
+                return res.status(400).json({ message: "Invalid blog id" });
+            }
+
             const blogComments = await Comment.find({ blogId });
 
             if (!blogComments) {
-                const error = new CustomError("The blog does not exist", 404);
+                const error = new CustomError("Blog not found", 404);
                 throw error;
             }
             res.status(200)
@@ -83,10 +89,14 @@ export class Portfolio {
             const blogId = req.params.blogId
             const userId = req.userId;
 
+            if (!isValidObjectId(blogId)) {
+                return res.status(400).json({ message: "Invalid blog id" });
+            }
+
             //Check if blog exist
             const blog = await Blog.findById(blogId);
             if (!blog) {
-                const error = new CustomError("This blog does not exist", 404);
+                const error = new CustomError("Blog not found", 404);
                 throw error;
             }
 
@@ -104,7 +114,7 @@ export class Portfolio {
 
             res.status(201)
                 .json({
-                    message: 'Comment posted!',
+                    message: 'Comment posted successfully!',
                     comment: newComment.toObject()
                 });
         }
@@ -125,6 +135,10 @@ export class Portfolio {
             const blogId = req.params.blogId
             const userId = req.userId;
 
+            if (!isValidObjectId(blogId)) {
+                return res.status(400).json({ message: "Invalid blog id" });
+            }
+
             //Check if blog exist
             const blog = await Blog.findById(blogId);
             if (!blog) {
@@ -141,7 +155,7 @@ export class Portfolio {
                 blog.save();
 
                 return res.status(201)
-                    .json({ message: "Like was added successfully" })
+                    .json({ message: "Like added successfully!" })
             }
             res.status(409)
                 .json({ message: "Like you're trying to add on this blog already exist, you can't add another" })
@@ -160,6 +174,9 @@ export class Portfolio {
             const { description } = req.body;
             const blogId = req.params.blogId
             const userId = req.userId;
+            if (!isValidObjectId(blogId)) {
+                return res.status(400).json({ message: "Invalid blog id" });
+            }
 
             //Check if blog exist
             const blog = await Blog.findById(blogId);
@@ -177,8 +194,8 @@ export class Portfolio {
             blog.likes = blog.likes! - 1;
             blog.save();
 
-            res.status(201)
-                .json({ message: "Like was Removed successfully" })
+            res.status(200)
+                .json({ message: "Like removed successfully!" })
         }
         catch (err) {
             if (err instanceof CustomError) {
@@ -199,7 +216,10 @@ export class Portfolio {
             await newMessage.save();
             res.status(201).json(newMessage.toObject());
         } catch (error) {
-            console.log(error);
+            res.status(500)
+                .json({
+                    message: "Server Error"
+                });
         }
     }
 }

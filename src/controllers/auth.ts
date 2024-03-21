@@ -9,7 +9,6 @@ import User from "../model/user";
 import validationSchema from "../helpers/validation_schema"
 import { CustomError } from './dashboard'
 
-
 export class Auth {
     postSignUp: RequestHandler = async (req, res) => {
         try {
@@ -50,7 +49,7 @@ export class Auth {
                 })
             }
             else {
-                res.status(500).json();
+                res.status(500).json({ message: "Server error" });
             }
         }
     };
@@ -62,13 +61,13 @@ export class Auth {
             const user = await User.findOne({ email: email });
 
             if (!user) {
-                const error = new CustomError('User with this email not found', 401);
+                const error = new CustomError('The provided credentials are invalid.', 401);
                 throw error;
             }
             const userPasswordCheck = await bcrypt.compare(password, user.password);
 
             if (!userPasswordCheck) {
-                const error = new CustomError('Invalid password', 401);
+                const error = new CustomError('The provided credentials are invalid.', 401);
                 throw error;
             }
             const token = jwt.sign({
@@ -88,7 +87,7 @@ export class Auth {
             if (err instanceof CustomError) {
                 res.status(err.statusCode).json({ message: err.message });
             } else {
-                res.status(500).json({ Message: "Login Error" });
+                res.status(500).json({ message: "Server error" });
             }
         }
     }
@@ -106,14 +105,14 @@ export class Auth {
             }
 
             if (!validateResult.isEmpty()) {
-                const error = new CustomError('Validation failed, Enter valid inputs', 422);
+                const error = new CustomError('Validation failed, Invalid data', 422);
                 throw error;
             }
 
             const updatedDocument = await User.findByIdAndUpdate(userId, { $set: { name: name } }, { new: true })
             res.status(200)
                 .json({
-                    "Message": "User updated Successfully!",
+                    "Message": "User updated successfully!",
                     "Updated User": updatedDocument
                 })
 
@@ -121,7 +120,7 @@ export class Auth {
             if (err instanceof CustomError) {
                 res.status(err.statusCode).json({ message: err.message });
             } else {
-                res.status(500).json({ Message: "User Update Error", Error: err });
+                res.status(500).json({ message: "Server error" });
             }
         }
     }
