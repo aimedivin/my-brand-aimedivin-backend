@@ -1,0 +1,11 @@
+name: Workflow for My brand api
+on: [push, pull_request]
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+     - name: Upload coverage reports to Codecov
+       uses: codecov/codecov-action@v4.0.1
+       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: aimedivin/my-brand-aimedivin-backend
