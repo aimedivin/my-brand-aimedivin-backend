@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs'
 import User from "../model/user";
 import validationSchema from "../helpers/validation_schema"
 import { CustomError } from './dashboard'
+import { devNull } from "os"
 
 export class Auth {
     postSignUp: RequestHandler = async (req, res) => {
@@ -15,26 +16,32 @@ export class Auth {
             const validateResult = await validationSchema.validateSchema.validateAsync(req.body);
 
             const name = req.body.name;
+            const photo = req.body.photo;
+            const dob = req.body.dob;
             const email = req.body.email;
             const password = req.body.password;
+
             const userDb = await User.findOne({ email });
             if (userDb) {
-                res.status(400).json({ Message: 'User already exists!' });
+                return res.status(400).json({ Message: 'User already exists!' });
             }
             const hashedPassword = await bcrypt.hash(password, 12);
 
             if (hashedPassword) {
-                const user = new User({
+                const user = await User.create({
                     name: name,
+                    photo: photo,
+                    dob: dob,
                     email: email,
                     password: hashedPassword
                 });
-                user.save()
+
                 if (user) {
-                    res.status(201)
+                    const sanitizedUser = await User.findOne({ email }, { password: 0 })
+                    return res.status(201)
                         .json({
                             message: 'User created successfully!',
-                            user: user
+                            user: sanitizedUser
                         })
                 }
             }
@@ -95,6 +102,8 @@ export class Auth {
     updateUser: RequestHandler = async (req, res) => {
         try {
             const name = req.body.name;
+            const photo = req.body.photo;
+            const dob = req.body.dob;
             const userIdParam = req.params.userId;
             const userId = req.userId;
             const validateResult = validationResult(req);
@@ -109,14 +118,21 @@ export class Auth {
                 throw error;
             }
 
-            const updatedDocument = await User.findByIdAndUpdate(userId, { $set: { name: name } }, { new: true })
-            res.status(200)
+            const updatedDocument = await User.findByIdAndUpdate(userId, { $set: { name: name, photo: photo, dob: dob } }, { new: true });
+
+            const sanitizedUpdatedUser = { ...updatedDocument };
+
+            console.log(sanitizedUpdatedUser)
+
+            return res.status(200)
                 .json({
                     "Message": "User updated successfully!",
                     "Updated User": updatedDocument
                 })
 
         } catch (err) {
+            console.log(err);
+
             if (err instanceof CustomError) {
                 res.status(err.statusCode).json({ message: err.message });
             } else {

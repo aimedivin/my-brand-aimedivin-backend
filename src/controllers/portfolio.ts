@@ -63,8 +63,8 @@ export class Portfolio {
             }
 
             const blogComments = await Comment.find({ blogId });
-
-            if (!blogComments) {
+            
+            if (!blogComments.length) {
                 const error = new CustomError("Blog not found", 404);
                 throw error;
             }
@@ -131,7 +131,6 @@ export class Portfolio {
     //-------------------- Blog Like ------------------
     postLike: RequestHandler = async (req, res) => {
         try {
-            const { description } = req.body;
             const blogId = req.params.blogId
             const userId = req.userId;
 
@@ -171,7 +170,6 @@ export class Portfolio {
 
     deleteLike: RequestHandler = async (req, res) => {
         try {
-            const { description } = req.body;
             const blogId = req.params.blogId
             const userId = req.userId;
             if (!isValidObjectId(blogId)) {

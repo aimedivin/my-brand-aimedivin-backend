@@ -53,7 +53,10 @@ const options = {
         },
         servers: [
             {
-                url: "http://localhost:3000"
+                url: "http://localhost:3000",
+            },
+            {
+                url: "https://my-brand-aimedivin-backend.onrender.com/"
             }
         ]
     },
@@ -66,11 +69,19 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 mongoose.connect(process.env.MONGODB_CONNECTION_STRING as string)
     .then(() => {
         console.log("Database connected");
-        app.listen(3000, () => {
-            console.log('Server started on port: 3000');
-        })
     })
     .catch(err => {
         console.log(err);
 
     })
+
+const startServer = () => {
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => {
+        console.log(`Server is running on port ${ port }`);
+    });
+};
+
+if (process.env.NODE_ENV !== 'test') {
+    startServer();
+}

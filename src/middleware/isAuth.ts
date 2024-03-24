@@ -38,41 +38,43 @@ export const isAuth: RequestHandler = async (req, res, next) => {
     try {
         const decodedToken = authorizationCheck(req)
         req.userId = decodedToken.userId;
-        
+
         let user = await User.findById(decodedToken.userId);
+
         if (!user!.isAdmin) {
             next()
+        } else {
+            const error = new CustomError('You\'re not authorized g', 401);
+            throw error;
         }
-        const error = new CustomError('You\'re not authorized', 401);
-        throw error;
     }
     catch (err) {
-        
+
         if ((err as Error).name === 'JsonWebTokenError' || (err as Error).name === 'TokenExpiredError') {
             res.status(401).json({ message: 'You\'re not authorized' });
         }
         else if (err instanceof CustomError) {
             res.status(err.statusCode).json({ message: err.message });
         } else {
-            res.status(500).json({message: "Server error"});
+            res.status(500).json({ message: "Server error" });
         }
     }
 }
 
-export const isAuthAdmin: RequestHandler = async(req, res, next) => {
-    
+export const isAuthAdmin: RequestHandler = async (req, res, next) => {
+
     try {
         const decodedToken = authorizationCheck(req)
         let user = await User.findById(decodedToken.userId);
-        
-        if(!user!.isAdmin) {
+
+        if (!user!.isAdmin) {
             const error = new CustomError('You\'re not authorized', 401);
             throw error;
         }
         next()
     }
     catch (err) {
-        
+
         if ((err as Error).name === 'JsonWebTokenError' || (err as Error).name === 'TokenExpiredError') {
             res.status(401).json({ message: 'You\'re not authorized' });
         }

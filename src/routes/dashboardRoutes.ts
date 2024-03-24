@@ -60,8 +60,8 @@
  *               type: object
  *               properties:
  *                 message:
- *                  type: string
- *                  example: Validation failed, Invalid data
+ *                   type: string
+ *                   example: Validation failed, Invalid data
  *       500:
  *         $ref: '#/components/responses/serverError'
  *         
