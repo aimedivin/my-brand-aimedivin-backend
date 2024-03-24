@@ -58,8 +58,29 @@
  * 
  * /api/auth/signup:
  *   post:
- *     summary: abc
+ *     summary: Create new user
  *     tags: [Authorization]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: John Doe
+ *               photo:
+ *                 type: string
+ *                 example: photo.jpg
+ *               dob:
+ *                 type: string
+ *                 example: 01/02/2020
+ *               email:
+ *                 type: string
+ *                 example: john@gmail.com
+ *               password:
+ *                 type: string
+ *                 example: johnpassword
  *     responses:
  *       201:
  *         description: User created
@@ -73,22 +94,56 @@
  *                   example: User created successfully!
  *                 user: 
  *                   type: object
- *                   $ref: '#/components/schemas/User'
+ *                   example: created user data!
  *       400:
  *         description: Existing User
  *         content:
  *           application/json:
  *             schema:
  *               type: object
- *             example:
- *               message: User already exists!
+ *               example:
+ *                 message: User already exists!
+ *       422:
+ *         description: Data Validation Error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "{field} {validation message}"
  *       500:
  *         $ref: '#/components/responses/serverError'
  * 
- * /api/auth/{userId}:
+ * /api/auth/user/{userId}:
  *   put:
- *     summary: abc
+ *     summary: Update user information
  *     tags: [Authorization]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The id of user
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: John Doe
+ *               photo:
+ *                 type: string
+ *                 example: photo.jpg
+ *               dob:
+ *                 type: string
+ *                 example: 01/02/2020
  *     responses:
  *       200:
  *         description: User updated
@@ -102,7 +157,7 @@
  *                   example: User updated successfully!
  *                 Updated user:
  *                   type: object
- *                   $ref: '#/components/schemas/User'
+ *                   example: Updated user data!
  *       401:
  *         $ref: '#/components/responses/fourZeroOneAuth'
  *       422:
