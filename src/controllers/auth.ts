@@ -9,6 +9,7 @@ import User from "../model/user";
 import validationSchema from "../helpers/validation_schema"
 import { CustomError } from './dashboard'
 import { devNull } from "os"
+import { isValidObjectId } from "mongoose"
 
 export class Auth {
     postSignUp: RequestHandler = async (req, res) => {
@@ -108,6 +109,10 @@ export class Auth {
             const userId = req.userId;
             const validateResult = validationResult(req);
 
+            if (!isValidObjectId(userIdParam)) {
+                return res.status(400).json({ message: "Invalid user id" });
+            }
+
             if (userIdParam != userId) {
                 const error = new CustomError('Not authorized', 401);
                 throw error;
@@ -120,18 +125,17 @@ export class Auth {
 
             const updatedDocument = await User.findByIdAndUpdate(userId, { $set: { name: name, photo: photo, dob: dob } }, { new: true });
 
-            const sanitizedUpdatedUser = { ...updatedDocument };
+            // const sanitizedUpdatedUser = { ...updatedDocument };
 
-            console.log(sanitizedUpdatedUser)
+            // console.log(sanitizedUpdatedUser)
 
             return res.status(200)
                 .json({
                     "Message": "User updated successfully!",
-                    "Updated User": updatedDocument
+                    "UpdatedUser": updatedDocument
                 })
 
         } catch (err) {
-            console.log(err);
 
             if (err instanceof CustomError) {
                 res.status(err.statusCode).json({ message: err.message });
