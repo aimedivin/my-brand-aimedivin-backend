@@ -38,7 +38,7 @@ const userToken = () => {
 describe('APITest', () => {
     beforeAll(async () => {
         await mongoose.disconnect()
-        await mongoose.connect(process.env.MONGODB_TEST_CONNECTION_STRING as string)
+        await mongoose.connect(process.env.MONGODB_TEST_CONNECTION_STRING!.toString())
     }, 60000)
 
     afterAll(async () => {
