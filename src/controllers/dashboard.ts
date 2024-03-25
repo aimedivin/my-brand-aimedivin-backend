@@ -93,7 +93,6 @@ export class Dashboard {
                     }
                 ]
             });
-            console.log(existingBlog);
 
             if (existingBlog)
                 return res.status(409)
@@ -209,7 +208,7 @@ export class Dashboard {
                 });
         } catch (error) {
             res.status(500)
-                .json({ message: "Server rror" });
+                .json({ message: "Server error" });
 
         }
     }
@@ -271,8 +270,10 @@ export class Dashboard {
                     message: "Message not found"
                 });
         } catch (err) {
-            res.status(500).json({ message: "Server error" })
-            console.log(err);
+            res.status(500)
+                .json(
+                    { message: "Server error" }
+                )
         }
     }
 }

@@ -53,10 +53,10 @@ const options = {
         },
         servers: [
             {
-                url: "http://localhost:3000",
+                url: "https://my-brand-aimedivin-backend.onrender.com/"
             },
             {
-                url: "https://my-brand-aimedivin-backend.onrender.com/"
+                url: "http://localhost:3000",
             }
         ]
     },
