@@ -4,6 +4,10 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Environment Variables
+        run: |
+          echo "MONGODB_TEST_CONNECTION_STRING=${{ secrets.MONGODB_TEST_CONNECTION_STRING }}" >> $GITHUB_ENV
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v2
       - name: Set up Node 20
