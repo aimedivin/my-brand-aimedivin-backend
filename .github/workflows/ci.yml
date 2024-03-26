@@ -1,5 +1,9 @@
 name: My brand API Workflow
 on: [push, pull_request]
+env:
+  MONGODB_CONNECTION_STRING: ${{ secrets.MONGODB_CONNECTION_STRING }}
+  MONGODB_TEST_CONNECTION_STRING: ${{ secrets.MONGODB_TEST_CONNECTION_STRING }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -15,7 +19,7 @@ jobs:
       - name: Run tests and collect coverage
         run: npm run test
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4.0.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: aimedivin/my-brand-aimedivin-backend
