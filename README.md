@@ -1,5 +1,5 @@
-[![codecov](https://codecov.io/gh/{{REPOSITORY}}/branch/main/graph/badge.svg)](https://codecov.io/gh/{{REPOSITORY}})
-# My Brand Backend API
+
+# My Brand Backend API  [![codecov](https://codecov.io/gh/aimedivin/my-brand-aimedivin-backend/graph/badge.svg?token=D5IXN73SRQ)](https://codecov.io/gh/aimedivin/my-brand-aimedivin-backend)
 
 ## Project Overview
 My Brand Backend API provide RESTfull endpoints which act as server-side for My brand project.
