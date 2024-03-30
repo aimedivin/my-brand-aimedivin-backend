@@ -7,6 +7,8 @@
  *       required:
  *         - email
  *         - name
+ *         - photo
+ *         - dob
  *         - password
  *         - isAdmin
  *       properties:
@@ -19,9 +21,12 @@
  *         name:
  *           type: string
  *           description: Names for the user
- *         password:
+ *         dob:
  *           type: string
- *           description: Hashed password for the user
+ *           description: date of birth for the user
+ *         photo:
+ *           type: string
+ *           description: profile picture for the user
  *         isAdmin:
  *           type: boolean
  *           description: User role
@@ -348,6 +353,51 @@
  *         $ref: '#/components/responses/fourZeroFourBlog'
  *       500:
  *         $ref: '#/components/responses/serverError'
+ * /api/portfolio/user/{userId}:
+ *   get:
+ *     summary: Returns Data of a logged in user
+ *     tags: [Portfolio]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The id of user
+ *     responses:
+ *       200:
+ *         description: The User response by id
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       401:
+ *         $ref: '#/components/responses/fourZeroOneAuth'
+ *       400:
+ *         description: Incorrect syntax for Id
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid user id
+ *
+ *       404:
+ *         description: The user not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         $ref: '#/components/responses/serverError'
  * 
  * /api/portfolio/message:
  *   post:
@@ -398,6 +448,8 @@ router.delete('/blog/:blogId/like', isAuth, portfolioController.deleteLike);
 // Contact form message
 router.post('/message', portfolioController.postMessage);
 
+// User Data
+router.get("/user/:userId", isAuth, portfolioController.getUser);
 
 
 export default router;
