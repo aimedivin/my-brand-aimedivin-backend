@@ -230,10 +230,6 @@ export class Portfolio {
                         "user": user
                     });
             }
-            return res.status(404)
-                .json({
-                    message: "User not found"
-                });
         } catch (error) {
             if (error instanceof CustomError) {
                 res.status(error.statusCode).json({ message: error.message });

@@ -40,11 +40,16 @@ export const isAuth: RequestHandler = async (req, res, next) => {
         req.userId = decodedToken.userId;
 
         let user = await User.findById(decodedToken.userId);
-
+        if (!user) {
+            return res.status(404)
+                .json({
+                    message: "User not found"
+                });
+        }
         if (!user!.isAdmin) {
             next()
         } else {
-            const error = new CustomError('You\'re not authorized g', 401);
+            const error = new CustomError('You\'re not authorized!', 401);
             throw error;
         }
     }

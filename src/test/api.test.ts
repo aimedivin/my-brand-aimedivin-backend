@@ -922,6 +922,35 @@ describe('APITest', () => {
                         expect(res.statusCode).toBe(401);
                         expect(res.body.user).toBeUndefined();
                     });
+                    test('for fake id', async () => {
+                        const fakeUserId = userId.toString().split('').reverse().join('');
+
+                        const res = await request(app)
+                            .get(`/api/portfolio/user/${fakeUserId}/`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                        expect(res.statusCode).toBe(401);
+                        expect(res.body.user).toBeUndefined();
+                    });
+                    test('for unregistered user', async () => {
+                        
+                        const user = new mongoose.Types.ObjectId();
+                        
+                        const sampleUserToken = jwt.sign({
+                            email: "sampletest@gmail.com",
+                            userId: user.toString()
+                        },
+                            `${process.env.JWT_SECRET}`,
+                            { expiresIn: '1h' }
+                        );
+
+                        const res = await request(app)
+                            .get(`/api/portfolio/user/${user}/`)
+                            .set('Authorization', `Bearer ${sampleUserToken}`)
+
+                        expect(res.statusCode).toBe(404);
+                        expect(res.body.user).toBeUndefined();
+                    });
                 })
             });
             describe('If user is not authenticated', () => {
