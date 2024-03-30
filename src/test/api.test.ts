@@ -688,6 +688,7 @@ describe('APITest', () => {
                         await Comment.create({
                             _id: commentId,
                             creatorId: userId,
+                            creatorName: "John Doe",
                             blogId: blogId,
                             description: "xyz"
                         })
@@ -885,6 +886,55 @@ describe('APITest', () => {
                 });
             })
         })
+        describe('LoggerUserDataTest', () => {
+            let loggedUserToken: string;
+
+            beforeAll(async () => {
+                loggedUserToken = userToken();
+            })
+
+            describe('If User is Authenticated', () => {
+                test('should return user info', async () => {
+                    const res = await request(app)
+                        .get(`/api/portfolio/user/${userId}/`)
+                        .set('Authorization', `Bearer ${loggedUserToken}`)
+                    expect(res.statusCode).toBe(200);
+                    expect(res.body.user).toBeDefined();
+                })
+                describe("does not return user data", () => {
+                    test('for incorrect syntax of _id', async () => {
+                        const fakeUserId = 'blog-123';
+                        const res = await request(app)
+                            .get(`/api/portfolio/user/${fakeUserId}/`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                        expect(res.statusCode).toBe(400);
+                        expect(res.body.user).toBeUndefined();
+                    });
+                    test('for fake id', async () => {
+                        const fakeUserId = userId.toString().split('').reverse().join('');
+
+                        const res = await request(app)
+                            .get(`/api/portfolio/user/${fakeUserId}/`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                        expect(res.statusCode).toBe(401);
+                        expect(res.body.user).toBeUndefined();
+                    });
+                })
+            });
+            describe('If user is not authenticated', () => {
+                test('does not return user data', async () => {
+                    const res = await request(app)
+                        .get(`/api/portfolio/user/${userId}/`)
+                        .set('Authorization', `Bearer dummy-token`)
+
+                    expect(res.statusCode).toBe(401)
+                    expect(res.body.user).toBeUndefined();
+                })
+            })
+        })
+
         describe('ContactFormMessageTest', () => {
             afterAll(async () => {
                 await Comment.deleteMany();

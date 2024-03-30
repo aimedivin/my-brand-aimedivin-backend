@@ -136,7 +136,6 @@ export class Auth {
                 })
 
         } catch (err) {
-
             if (err instanceof CustomError) {
                 res.status(err.statusCode).json({ message: err.message });
             } else {

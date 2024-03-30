@@ -7,6 +7,8 @@
  *       required:
  *         - email
  *         - name
+ *         - photo
+ *         - dob
  *         - password
  *         - isAdmin
  *       properties:
@@ -19,7 +21,10 @@
  *         name:
  *           type: string
  *           description: Names for the user
- *         password:
+ *         dob:
+ *           type: string
+ *           description: Hashed password for the user
+ *         photo:
  *           type: string
  *           description: Hashed password for the user
  *         isAdmin:
@@ -348,6 +353,38 @@
  *         $ref: '#/components/responses/fourZeroFourBlog'
  *       500:
  *         $ref: '#/components/responses/serverError'
+ * /api/portfolio/user/{userId}:
+ *   get:
+ *     summary: Returns information of single loggedIn user
+ *     tags: [Portfolio]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The id of user
+ *     responses:
+ *       200:
+ *         description: The User response by id
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       400:
+ *         description: Invalid blog Id
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid blog id
+ *       404:
+ *         $ref: '#/components/responses/fourZeroFourBlog'
+ *       500:
+ *         $ref: '#/components/responses/serverError'
  * 
  * /api/portfolio/message:
  *   post:
@@ -398,6 +435,8 @@ router.delete('/blog/:blogId/like', isAuth, portfolioController.deleteLike);
 // Contact form message
 router.post('/message', portfolioController.postMessage);
 
+// User information
+router.get("/user/:userId", isAuth, portfolioController.getUser);
 
 
 export default router;
