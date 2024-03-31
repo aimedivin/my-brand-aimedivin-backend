@@ -7,6 +7,7 @@ import Message from '../model/message';
 import { CustomError } from './dashboard';
 import Like from '../model/like';
 import mongoose, { isValidObjectId } from 'mongoose';
+import User from '../model/user';
 export class Portfolio {
     // Fetching All blogs
     getBlogs: RequestHandler = async (req, res) => {
@@ -100,12 +101,15 @@ export class Portfolio {
                 throw error;
             }
 
+            const userName = await User.findById(userId, {name: 1});
+
             blog.comments = (blog.comments ? blog.comments : 0) + 1;
             await blog.save();
 
             const newComment = new Comment(
                 {
                     creatorId: userId,
+                    creatorName: userName!.name,
                     blogId: blogId,
                     description: description
                 }
@@ -204,7 +208,36 @@ export class Portfolio {
         }
     }
 
+    // Fetching single user information
 
+    getUser: RequestHandler = async (req, res) => {
+        try {
+            const userIdParam = req.params.userId;
+            const userId = req.userId;
+            if (!isValidObjectId(userIdParam) || !isValidObjectId(userId)) {
+                return res.status(400).json({ message: "Invalid user id" });
+            }
+            if (userIdParam != userId) {
+                const error = new CustomError('Not authorized', 401);
+                throw error;
+            }
+
+            const user = await User.findById(userId, { password: 0 });
+            if (user) {
+                return res.status(200)
+                    .json({
+                        "Message": "Fetching User information was successful !",
+                        "user": user
+                    });
+            }
+        } catch (error) {
+            if (error instanceof CustomError) {
+                res.status(error.statusCode).json({ message: error.message });
+            } else {
+                res.status(500).json({ Error: "Server Error" });
+            }
+        }
+    }
 
     // Save Message
     postMessage: RequestHandler = async (req, res) => {
