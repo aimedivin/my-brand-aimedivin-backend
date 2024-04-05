@@ -28,7 +28,7 @@
  *       - bearerAuth: []
  *     responses:
  *       201:
- *         description: Blogs created
+ *         description: Blog was created
  *         content:
  *           application/json:
  *             schema:
@@ -43,7 +43,7 @@
  *       401:
  *         $ref: '#/components/responses/fourZeroOneAuth'
  *       409:
- *         description: Blogs data duplication
+ *         description: Blog data duplication
  *         content:
  *           application/json:
  *             schema:
@@ -52,6 +52,16 @@
  *                 message:
  *                   type: string
  *                   example: The details provided belong to another blog in the database
+ *       415:
+ *         description: No image provided or unsupported media file uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                  type: string
+ *                  example: No image provided..
  *       422:
  *         description: Data Validation Error
  *         content:
@@ -151,8 +161,8 @@
  *                 message:
  *                  type: string
  *                  example: The details provided belong to another blog in the database
- *       422:
- *         description: Data Validation Error
+ *       415:
+ *         description: Unsupported Media Type for the uploaded photo.
  *         content:
  *           application/json:
  *             schema:
@@ -160,7 +170,7 @@
  *               properties:
  *                 message:
  *                  type: string
- *                  example: Validation failed, Invalid data
+ *                  example: Unsupported Media Type.
  *       500:
  *         $ref: '#/components/responses/serverError'
  *   delete:
@@ -289,19 +299,19 @@ import { Router, RequestHandler } from "express";
 import { body } from "express-validator";
 
 import { Dashboard } from "../controllers/dashboard";
-import { isAuth, isAuthAdmin } from '../middleware/isAuth'
+import { isAdminAuth } from '../middleware/isAuth'
 
 const router = Router();
 
 const dashboardController = new Dashboard();
 
-router.get("/blogs", isAuthAdmin, dashboardController.getBlogs);
+router.get("/blogs", isAdminAuth, dashboardController.getBlogs);
 
-router.get("/blog/:blogId", isAuthAdmin, dashboardController.getBlog);
+router.get("/blog/:blogId", isAdminAuth, dashboardController.getBlog);
 
 router.put(
     "/blog/:blogId",
-    isAuthAdmin,
+    isAdminAuth,
     [
         body("title").trim().isLength({ min: 5 }),
         body("description").trim().isLength({ min: 5 }),
@@ -311,7 +321,7 @@ router.put(
 
 router.post(
     "/blog",
-    isAuthAdmin,
+    isAdminAuth,
     [
         body("title").trim().isLength({ min: 5 }),
         body("description").trim().isLength({ min: 5 }),
@@ -319,14 +329,14 @@ router.post(
     dashboardController.postBlog
 );
 
-router.delete("/blog/:blogId", isAuthAdmin, dashboardController.deleteBlog);
+router.delete("/blog/:blogId", isAdminAuth, dashboardController.deleteBlog);
 
 // Users
-router.get("/users", isAuthAdmin, dashboardController.getUsers);
+router.get("/users", isAdminAuth, dashboardController.getUsers);
 
 // Messages
-router.get("/messages", isAuthAdmin,dashboardController.getMessages);
+router.get("/messages", isAdminAuth,dashboardController.getMessages);
 
-router.get("/messages/:msgId", isAuthAdmin,dashboardController.getMessage);
+router.get("/messages/:msgId", isAdminAuth,dashboardController.getMessage);
 
 export default router;

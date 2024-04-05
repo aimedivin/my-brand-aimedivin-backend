@@ -14,10 +14,16 @@ import { isValidObjectId } from "mongoose"
 export class Auth {
     postSignUp: RequestHandler = async (req, res) => {
         try {
+
             const validateResult = await validationSchema.validateSchema.validateAsync(req.body);
 
+            if (!req.file) {
+                const error = new CustomError('No image provided.', 415);
+                throw error;
+            }
+
             const name = req.body.name;
-            const photo = req.body.photo;
+            const photo = req.file.path;
             const dob = req.body.dob;
             const email = req.body.email;
             const password = req.body.password;
@@ -141,6 +147,44 @@ export class Auth {
                 res.status(err.statusCode).json({ message: err.message });
             } else {
                 res.status(500).json({ message: "Server error" });
+            }
+        }
+    }
+
+    // Fetching single user information
+
+    getUser: RequestHandler = async (req, res) => {
+        try {
+            const userIdParam = req.params.userId;
+            const userId = req.userId;
+            if (!isValidObjectId(userIdParam) || !isValidObjectId(userId)) {
+                return res.status(400).json({ message: "Invalid user id" });
+            }
+
+            const user = await User.findById(userIdParam, { password: 0 });
+            const userAdmin = await User.findById(userId, { password: 0 });
+
+            if (user && userAdmin) {
+                if (userIdParam != userId && !userAdmin.isAdmin) {
+                    const error = new CustomError('You\'re not authorized', 401);
+                    throw error;
+                }
+
+                return res.status(200)
+                    .json({
+                        "Message": "User information successfully retrieved!",
+                        "user": user
+                    });
+            }
+            return res.status(404)
+                .json(
+                    { massage: 'User not found.' }
+                )
+        } catch (error) {
+            if (error instanceof CustomError) {
+                res.status(error.statusCode).json({ message: error.message });
+            } else {
+                res.status(500).json({ Error: "Server Error" });
             }
         }
     }

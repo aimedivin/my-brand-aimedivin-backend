@@ -13,9 +13,11 @@ import bcrypt from 'bcryptjs'
 import jwt from "jsonwebtoken";
 
 import "dotenv/config";
+import path from "path";
 
+const apiUrl = 'http://localhost:3000/'
 
-
+const adminId = new mongoose.Types.ObjectId();
 const userId = new mongoose.Types.ObjectId();
 const userId2 = new mongoose.Types.ObjectId();
 
@@ -75,13 +77,12 @@ describe('APITest', () => {
             it("should create new User", async () => {
                 const res = await request(app)
                     .post('/api/auth/signup')
-                    .send({
-                        name: 'username',
-                        photo: 'userphoto',
-                        dob: 'userdob',
-                        email: 'user@gmail.com',
-                        password: 'userpassword'
-                    })
+                    .field('name', 'username')
+                    .field('dob', 'userdob')
+                    .field('email', 'user@gmail.com')
+                    .field('password', 'userpassword')
+                    .attach('photo', `${__dirname}/test-file/photo.png`)
+
                 expect(res.statusCode).toBe(201)
                 expect(res.body.message).toBeDefined()
             })
@@ -90,14 +91,23 @@ describe('APITest', () => {
                 test('if user email already exist', async () => {
                     const res = await request(app)
                         .post('/api/auth/signup')
-                        .send({
-                            name: 'username',
-                            photo: 'userphoto',
-                            dob: 'userdob',
-                            email: 'user@gmail.com',
-                            password: await bcrypt.hash('userpassword', 12)
-                        })
+                        .field('name', 'username')
+                        .field('dob', 'userdob')
+                        .field('email', 'user@gmail.com')
+                        .field('password', 'userpassword')
+                        .attach('photo', `${__dirname}/test-file/photo.png`)
                     expect(res.statusCode).toBe(400)
+                })
+
+                test('For unsupported image type.', async () => {
+                    const res = await request(app)
+                        .post('/api/auth/signup')
+                        .field('name', 'username')
+                        .field('dob', 'userdob')
+                        .field('email', 'user@gmail.com')
+                        .field('password', 'userpassword')
+                        .attach('photo', `${__dirname}/test-file/photo.webp`)
+                    expect(res.statusCode).toBe(415)
                 })
 
                 test('if there is data validation error', async () => {
@@ -171,7 +181,7 @@ describe('APITest', () => {
                     expect(res.statusCode).toBe(200);
                     expect(res.body.UpdatedUser).toBeDefined();
                 });
-                test('doesn\'t update user data, for incorrect syntax of _id submitted', async () => {
+                test('Doesn\'t update user data, for incorrect syntax of _id submitted', async () => {
                     const loggedUserToken = userToken();
                     const fakeUserId = 'blog-123';
                     const res = await request(app)
@@ -233,6 +243,87 @@ describe('APITest', () => {
 
                     expect(res.statusCode).toBe(401);
                     expect(res.body.users).toBeUndefined();
+                })
+            })
+        })
+
+        describe('get user information', () => {
+            describe('LoggedUserDataTest', () => {
+                let loggedUserToken: string;
+
+                beforeAll(async () => {
+                    loggedUserToken = userToken();
+                })
+                describe('If User is Authenticated', () => {
+                    test('should return user info', async () => {
+                        const res = await request(app)
+                            .get(`/api/auth/user/${userId}/`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+                        expect(res.statusCode).toBe(200);
+                        expect(res.body.user).toBeDefined();
+                    })
+                    describe("does not return user data", () => {
+                        test('for incorrect syntax of _id', async () => {
+                            const fakeUserId = 'blog-123';
+                            const res = await request(app)
+                                .get(`/api/auth/user/${fakeUserId}/`)
+                                .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                            expect(res.statusCode).toBe(400);
+                            expect(res.body.user).toBeUndefined();
+                        });
+
+                        test('for fake id', async () => {
+                            const fakeUserId = new mongoose.Types.ObjectId();
+
+                            const res = await request(app)
+                                .get(`/api/auth/user/${fakeUserId.toString()}/`)
+                                .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                            expect(res.statusCode).toBe(404);
+                            expect(res.body.user).toBeUndefined();
+                        });
+                        
+                        test('for user who is not admin trying to get data for other users', async () => {
+                            const res = await request(app)
+                                .get(`/api/auth/user/${userId2.toString()}/`)
+                                .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                            expect(res.statusCode).toBe(401);
+                            expect(res.body.user).toBeUndefined();
+                            
+                        });
+
+                        test('for unregistered user', async () => {
+
+                            const user = new mongoose.Types.ObjectId();
+
+                            const sampleUserToken = jwt.sign({
+                                email: "sampletest@gmail.com",
+                                userId: user.toString()
+                            },
+                                `${process.env.JWT_SECRET}`,
+                                { expiresIn: '1h' }
+                            );
+
+                            const res = await request(app)
+                                .get(`/api/auth/user/${user}/`)
+                                .set('Authorization', `Bearer ${sampleUserToken}`)
+
+                            expect(res.statusCode).toBe(404);
+                            expect(res.body.user).toBeUndefined();
+                        });
+                    })
+                });
+                describe('If user is not authenticated', () => {
+                    test('does not return user data', async () => {
+                        const res = await request(app)
+                            .get(`/api/auth/user/${userId}`)
+                            .set('Authorization', `Bearer dummy-token`)
+
+                        expect(res.statusCode).toBe(401)
+                        expect(res.body.user).toBeUndefined();
+                    })
                 })
             })
         })
@@ -307,6 +398,25 @@ describe('APITest', () => {
                             expect(res.body.blogs).toBeUndefined();
                         })
                     })
+                    describe('If user is Authenticated but he/she is not Admin', () => {
+                        
+                        test('should not return any blog', async () => {
+                            const sampleUserToken = jwt.sign({
+                                email: "test2@gmail.com",
+                                userId: userId2.toString()
+                            },
+                                `${process.env.JWT_SECRET}`,
+                                { expiresIn: '1h' }
+                            );
+
+                            const res = await request(app)
+                                .get(`/api/dashboard/blogs`)
+                                .set('Authorization', `Bearer ${sampleUserToken}`)
+
+                            expect(res.statusCode).toBe(401);
+                            expect(res.body.blogs).toBeUndefined();
+                        })
+                    })
                 })
                 describe('Get single blog', () => {
                     describe('If user is Authenticated', () => {
@@ -318,7 +428,7 @@ describe('APITest', () => {
                             expect(res.statusCode).toBe(200);
                             expect(res.body.blog).toBeDefined();
                         });
-                        test('doesn\'t return a blog, for incorrect syntax of _id', async () => {
+                        test('Doesn\'t return a blog, for incorrect syntax of _id', async () => {
                             const fakeBlogId = 'blog-123';
                             const res = await request(app)
                                 .get(`/api/dashboard/blog/${fakeBlogId}`)
@@ -327,7 +437,7 @@ describe('APITest', () => {
                             expect(res.statusCode).toBe(400);
                             expect(res.body.blog).toBeUndefined();
                         });
-                        test('doesn\'t return a blog, for fake id', async () => {
+                        test('Doesn\'t return a blog, for fake id', async () => {
                             const fakeBlogId = blogId.toString().split('').reverse().join('');
 
                             const res = await request(app)
@@ -355,74 +465,83 @@ describe('APITest', () => {
                             const res = await request(app)
                                 .put(`/api/dashboard/blog/${blogId}`)
                                 .set('Authorization', `Bearer ${loggedAdminToken}`)
-                                .send(
-                                    {
-                                        title: "Blog1",
-                                        description: "blog description",
-                                        imageUrl: "blog picture"
-                                    }
-                                )
+                                .field('title', "Blog1")
+                                .field('description', "blog description")
+                                .attach('imageUrl', `${__dirname}/test-file/photo.png`)
 
                             expect(res.statusCode).toBe(200);
                             expect(res.body.blog).toBeDefined();
 
                         })
-                        test('doesn\'t update a blog, for incorrect syntax of _id', async () => {
-                            const fakeBlogId = 'blog-123';
-                            const res = await request(app)
-                                .put(`/api/dashboard/blog/${fakeBlogId}`)
-                                .set('Authorization', `Bearer ${loggedAdminToken}`);;
+                        describe('Doesn\'t update a blog.', () => {
+                            test('For incorrect syntax of _id', async () => {
+                                const fakeBlogId = 'blog-123';
+                                const res = await request(app)
+                                    .put(`/api/dashboard/blog/${fakeBlogId}`)
+                                    .set('Authorization', `Bearer ${loggedAdminToken}`);;
 
-                            expect(res.statusCode).toBe(400);
-                            expect(res.body.blog).toBeUndefined();
-                        });
-                        test('doesn\'t update a blog, if submitted data belong to other blog', async () => {
-                            const fakeBlogId = blogId.toString().split('').reverse().join('');
+                                expect(res.statusCode).toBe(400);
+                                expect(res.body.blog).toBeUndefined();
+                            });
+                            test('if submitted data belong to other blog', async () => {
+                                const fakeBlogId = blogId.toString().split('').reverse().join('');
 
-                            const res = await request(app)
-                                .put(`/api/dashboard/blog/${fakeBlogId}`)
-                                .set('Authorization', `Bearer ${loggedAdminToken}`)
-                                .send(
-                                    {
-                                        title: "Blog1",
-                                        description: "blog description",
-                                        imageUrl: "blog picture"
-                                    }
-                                );
+                                const res = await request(app)
+                                    .put(`/api/dashboard/blog/${fakeBlogId}`)
+                                    .set('Authorization', `Bearer ${loggedAdminToken}`)
+                                    .send(
+                                        {
+                                            title: "Blog1",
+                                            description: "blog description",
+                                            newImageUrl: "blog picture"
+                                        }
+                                    );
 
-                            expect(res.statusCode).toBe(409);
-                            expect(res.body.blog).toBeUndefined();
-                        });
-                        test('doesn\'t update a blog, for fake id', async () => {
-                            const fakeBlogId = blogId.toString().split('').reverse().join('');
+                                expect(res.statusCode).toBe(409);
+                                expect(res.body.blog).toBeUndefined();
+                            });
+                            test('For fake id', async () => {
+                                const fakeBlogId = blogId.toString().split('').reverse().join('');
 
-                            const res = await request(app)
-                                .put(`/api/dashboard/blog/${fakeBlogId}`)
-                                .set('Authorization', `Bearer ${loggedAdminToken}`)
-                                .send(
-                                    {
-                                        title: "Blog title updated",
-                                        description: "blog desc",
-                                        imageUrl: "blog pict"
-                                    }
-                                );
+                                const res = await request(app)
+                                    .put(`/api/dashboard/blog/${fakeBlogId}`)
+                                    .set('Authorization', `Bearer ${loggedAdminToken}`)
+                                    .send(
+                                        {
+                                            title: "Blog title updated",
+                                            description: "blog desc",
+                                            newImageUrl: "blog picture"
+                                        }
+                                    );
 
-                            expect(res.statusCode).toBe(404);
-                            expect(res.body.blog).toBeUndefined();
-                        });
-                        test('doesn\'t update a blog, for validation error', async () => {
+                                expect(res.statusCode).toBe(404);
+                                expect(res.body.blog).toBeUndefined();
+                            });
+                            test('For validation error', async () => {
 
-                            const res = await request(app)
-                                .put(`/api/dashboard/blog/${blogId}`)
-                                .set('Authorization', `Bearer ${loggedAdminToken}`)
-                                .send();
+                                const res = await request(app)
+                                    .put(`/api/dashboard/blog/${blogId}`)
+                                    .set('Authorization', `Bearer ${loggedAdminToken}`)
+                                    .send();
 
-                            expect(res.statusCode).toBe(422);
-                            expect(res.body.blog).toBeUndefined();
-                        });
+                                expect(res.statusCode).toBe(422);
+                                expect(res.body.blog).toBeUndefined();
+                            });
+                            test('For unsupported file type', async () => {
 
+                                const res = await request(app)
+                                    .put(`/api/dashboard/blog/${blogId}`)
+                                    .set('Authorization', `Bearer ${loggedAdminToken}`)
+                                    .field('title', "Blog1")
+                                    .field('description', "blog description")
+                                    .attach('imageUrl', `${__dirname}/test-file/photo.webp`)
+
+                                expect(res.statusCode).toBe(415);
+                                expect(res.body.blog).toBeUndefined();
+                            });
+                        })
                     })
-                    describe('if user is authenticated', () => {
+                    describe('if user is not authenticated', () => {
                         test('should not Update blog', async () => {
                             const res = await request(app)
                                 .put('/api/dashboard/blog/${blogId}');
@@ -439,41 +558,51 @@ describe('APITest', () => {
                             const res = await request(app)
                                 .post('/api/dashboard/blog')
                                 .set("Authorization", `Bearer ${loggedAdminToken}`)
-                                .send({
-                                    title: "Blog2",
-                                    description: "blog2 description",
-                                    imageUrl: "blog2 picture"
-                                })
+                                .field('title', "Blog2")
+                                .field('description', "blog2 description")
+                                .attach('imageUrl', `${__dirname}/test-file/photo.png`)
 
                             expect(res.statusCode).toBe(201)
                             expect(res.body.blog).toBeDefined()
                         });
-                        test('doesn\'t create new blog, if there is data validation error', async () => {
-                            const res = await request(app)
-                                .post('/api/dashboard/blog')
-                                .set("Authorization", `Bearer ${loggedAdminToken}`)
-                                .send({
-                                    title: "Blo",
-                                    description: "blog2 description",
-                                    imageUrl: "blog2 picture"
-                                })
+                        describe('Doesn\'t create new blog', () => {
+                            test('If there is data validation error', async () => {
+                                const res = await request(app)
+                                    .post('/api/dashboard/blog')
+                                    .set("Authorization", `Bearer ${loggedAdminToken}`)
+                                    .send({
+                                        title: "Blo",
+                                        description: "blog2 description",
+                                        imageUrl: "blog2 picture"
+                                    })
 
-                            expect(res.statusCode).toBe(422)
-                            expect(res.body.blog).toBeUndefined()
-                        });
-                        test('doesn\'t create new blog, if provided data belong to other blog', async () => {
-                            const res = await request(app)
-                                .post('/api/dashboard/blog')
-                                .set("Authorization", `Bearer ${loggedAdminToken}`)
-                                .send({
-                                    title: "Blog2",
-                                    description: "blog2 description",
-                                    imageUrl: "blog2 picture"
-                                })
+                                expect(res.statusCode).toBe(422)
+                                expect(res.body.blog).toBeUndefined()
+                            });
+                            test('If provided data belong to other blog', async () => {
+                                const res = await request(app)
+                                    .post('/api/dashboard/blog')
+                                    .set("Authorization", `Bearer ${loggedAdminToken}`)
+                                    .field('title', "Blog2")
+                                    .field('description', "blog2 description")
+                                    .attach('imageUrl', `${__dirname}/test-file/photo.png`)
 
-                            expect(res.statusCode).toBe(409)
-                            expect(res.body.blog).toBeUndefined()
-                        });
+                                expect(res.statusCode).toBe(409)
+                                expect(res.body.blog).toBeUndefined()
+                            });
+                            test('For unsupported file type', async () => {
+
+                                const res = await request(app)
+                                    .post(`/api/dashboard/blog`)
+                                    .set('Authorization', `Bearer ${loggedAdminToken}`)
+                                    .field('title', "Blog-1")
+                                    .field('description', "blog-1 description")
+                                    .attach('imageUrl', `${__dirname}/test-file/photo.webp`)
+
+                                expect(res.statusCode).toBe(415);
+                                expect(res.body.blog).toBeUndefined();
+                            });
+                        })
                     })
                     describe('if user is not authenticated', () => {
                         test('should not create blog', async () => {
@@ -495,24 +624,26 @@ describe('APITest', () => {
                             expect(res.statusCode).toBe(200);
                             expect(res.body.message).toBeDefined();
                         })
-                        test('doesn\'t delete blog, for incorrect syntax of _id', async () => {
-                            const fakeBlogId = 'blog-123';
-                            const res = await request(app)
-                                .delete(`/api/dashboard/blog/${fakeBlogId}`)
-                                .set('Authorization', `Bearer ${loggedAdminToken}`);;
+                        describe('Doesn\'t delete blog', () => {
+                            test('For incorrect syntax of _id', async () => {
+                                const fakeBlogId = 'blog-123';
+                                const res = await request(app)
+                                    .delete(`/api/dashboard/blog/${fakeBlogId}`)
+                                    .set('Authorization', `Bearer ${loggedAdminToken}`);;
 
-                            expect(res.statusCode).toBe(400);
-                            expect(res.body.blog).toBeUndefined();
-                        });
-                        test('doesn\'t delete blog, for fake id', async () => {
-                            const fakeBlogId = blogId.toString().split('').reverse().join('');
+                                expect(res.statusCode).toBe(400);
+                                expect(res.body.blog).toBeUndefined();
+                            });
+                            test('For fake id', async () => {
+                                const fakeBlogId = blogId.toString().split('').reverse().join('');
 
-                            const res = await request(app)
-                                .delete(`/api/dashboard/blog/${fakeBlogId}`)
-                                .set('Authorization', `Bearer ${loggedAdminToken}`);
+                                const res = await request(app)
+                                    .delete(`/api/dashboard/blog/${fakeBlogId}`)
+                                    .set('Authorization', `Bearer ${loggedAdminToken}`);
 
-                            expect(res.statusCode).toBe(404);
-                            expect(res.body.blog).toBeUndefined();
+                                expect(res.statusCode).toBe(404);
+                                expect(res.body.blog).toBeUndefined();
+                            })
                         })
                     })
                     describe('If user is not authenticated', () => {
@@ -582,7 +713,7 @@ describe('APITest', () => {
                         expect(res.statusCode).toBe(200);
                         expect(res.body.msg).toBeDefined();
                     })
-                    test('doesn\'t return any message, for incorrect syntax of _id', async () => {
+                    test('Doesn\'t return any message, for incorrect syntax of _id', async () => {
                         const fakeBlogId = 'blog-123';
                         const res = await request(app)
                             .get(`/api/dashboard/messages/${fakeBlogId}`)
@@ -591,7 +722,7 @@ describe('APITest', () => {
                         expect(res.statusCode).toBe(400);
                         expect(res.body.blog).toBeUndefined();
                     });
-                    test('doesn\'t return any message, for fake id', async () => {
+                    test('Doesn\'t return any message, for fake id', async () => {
                         const fakeBlogId = blogId.toString().split('').reverse().join('');
 
                         const res = await request(app)
@@ -626,6 +757,15 @@ describe('APITest', () => {
             });
             await User.create([
                 {
+                    _id: adminId,
+                    name: "admintest",
+                    photo: "phototest",
+                    dob: "dobtest",
+                    email: "admin@gmail.com",
+                    password: 'adminpassword',
+                    isAdmin: true
+                },
+                {
                     _id: userId,
                     name: "usertest",
                     photo: "phototest",
@@ -657,22 +797,22 @@ describe('APITest', () => {
                     test('should return all blogs', async () => {
                         const res = await request(app).get('/api/portfolio/blogs');
                         expect(res.statusCode).toBe(200);
-                        expect(res.body).toBeInstanceOf(Object);
+                        expect(res.body.blogs).toBeDefined()
                     })
                 })
                 describe('Get single blog', () => {
                     test('should return blog for specific id', async () => {
                         const res = await request(app).get(`/api/portfolio/blog/${blogId}`);
                         expect(res.statusCode).toBe(200);
-                        expect(res.body).toBeInstanceOf(Object);
+                        expect(res.body.blog).toBeDefined()
                     });
-                    test('doesn\'t return a blog, for incorrect syntax of _id', async () => {
+                    test('Doesn\'t return a blog, for incorrect syntax of _id', async () => {
                         const fakeBlogId = 'blog-123';
                         const res = await request(app).get(`/api/portfolio/blog/${fakeBlogId}`);
                         expect(res.statusCode).toBe(400);
                         expect(res.body).toBeInstanceOf(Object);
                     });
-                    test('doesn\'t return a blog, for fake id', async () => {
+                    test('Doesn\'t return a blog, for fake id', async () => {
                         const fakeBlogId = blogId.toString().split('').reverse().join('');
 
                         const res = await request(app).get(`/api/portfolio/blog/${fakeBlogId}`);
@@ -703,7 +843,7 @@ describe('APITest', () => {
                         expect(res.statusCode).toBe(200);
                         expect(res.body).toBeInstanceOf(Object);
                     });
-                    describe('doesn\'t return any comment', () => {
+                    describe('Doesn\'t return any comment', () => {
                         test('for incorrect syntax of _id', async () => {
                             const fakeBlogId = 'blog-123';
                             const res = await request(app).get(`/api/portfolio/blog/${fakeBlogId}/comment`);
@@ -762,6 +902,23 @@ describe('APITest', () => {
                                 expect(res.statusCode).toBe(404);
                                 expect(res.body.message).toBeDefined();
                             });
+                            describe('For Authenticated admin trying to comment or do other thing for only end-users', () => {
+                                test('should not do any thing', async () => {
+                                    const sampleUserToken = jwt.sign({
+                                        email: "admin@gmail.com",
+                                        userId: adminId.toString()
+                                    },
+                                        `${process.env.JWT_SECRET}`,
+                                        { expiresIn: '1h' }
+                                    );
+
+                                    const res = await request(app)
+                                        .post(`/api/portfolio/blog/${blogId}/comment`)
+                                        .set('Authorization', `Bearer ${sampleUserToken}`)
+
+                                    expect(res.statusCode).toBe(401);
+                                })
+                            })
                         })
                     });
                     describe('If user is not authenticated', () => {
@@ -806,10 +963,10 @@ describe('APITest', () => {
                                 expect(res.body.message).toBeDefined();
                             });
                             test('for fake blogId', async () => {
-                                const fakeBlogId = blogId.toString().split('').reverse().join('');
+                                const fakeBlogId = new mongoose.Types.ObjectId();
 
                                 const res = await request(app)
-                                    .post(`/api/portfolio/blog/${fakeBlogId}/like`)
+                                    .post(`/api/portfolio/blog/${fakeBlogId.toString()}/like`)
                                     .set('Authorization', `Bearer ${loggedUserToken}`)
 
                                 expect(res.statusCode).toBe(404);
@@ -826,6 +983,38 @@ describe('APITest', () => {
                             });
                         })
                     });
+
+                    describe('UserBlogLikeTest', () => {
+                        test('Should Return Success Status Code', async () => {
+                            const res = await request(app)
+                                .get(`/api/portfolio/blog/${blogId}/like`)
+                                .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                            expect(res.statusCode).toBe(200);
+                        })
+
+                        describe('Should Not Return Success Status Code', () => {
+                            
+                            test('For incorrect syntax of blog Id', async () => {
+                                const fakeBlogId = 'blog-id-123';
+                                const res = await request(app)
+                                    .get(`/api/portfolio/blog/${fakeBlogId}/like`)
+                                    .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                                    expect(res.statusCode).toBe(400)
+                            });
+                            test('For blog which does not exist', async () => {
+                                const fakeBlogId = new mongoose.Types.ObjectId();
+                                
+                                const res = await request(app)
+                                    .get(`/api/portfolio/blog/${fakeBlogId.toString()}/like`)
+                                    .set('Authorization', `Bearer ${loggedUserToken}`)
+
+                                    expect(res.statusCode).toBe(404)
+                            });
+                        })
+                    })
+
                     describe('Removing like on blog', () => {
                         describe("does not remove like", () => {
                             test('for incorrect syntax of blodId', async () => {
@@ -838,10 +1027,10 @@ describe('APITest', () => {
                                 expect(res.body.message).toBeDefined();
                             });
                             test('for fake blogId', async () => {
-                                const fakeBlogId = blogId.toString().split('').reverse().join('');
+                                const fakeBlogId = new mongoose.Types.ObjectId();
 
                                 const res = await request(app)
-                                    .post(`/api/portfolio/blog/${fakeBlogId}/like`)
+                                    .delete(`/api/portfolio/blog/${fakeBlogId.toString()}/like`)
                                     .set('Authorization', `Bearer ${loggedUserToken}`)
 
                                 expect(res.statusCode).toBe(404);
@@ -887,83 +1076,6 @@ describe('APITest', () => {
             })
         })
 
-        describe('LoggerUserDataTest', () => {
-            let loggedUserToken: string;
-
-            beforeAll(async () => {
-                loggedUserToken = userToken();
-            })
-
-            describe('If User is Authenticated', () => {
-                test('should return user info', async () => {
-                    const res = await request(app)
-                        .get(`/api/portfolio/user/${userId}/`)
-                        .set('Authorization', `Bearer ${loggedUserToken}`)
-                    expect(res.statusCode).toBe(200);
-                    expect(res.body.user).toBeDefined();
-                })
-                describe("does not return user data", () => {
-                    test('for incorrect syntax of _id', async () => {
-                        const fakeUserId = 'blog-123';
-                        const res = await request(app)
-                            .get(`/api/portfolio/user/${fakeUserId}/`)
-                            .set('Authorization', `Bearer ${loggedUserToken}`)
-
-                        expect(res.statusCode).toBe(400);
-                        expect(res.body.user).toBeUndefined();
-                    });
-                    test('for fake id', async () => {
-                        const fakeUserId = userId.toString().split('').reverse().join('');
-
-                        const res = await request(app)
-                            .get(`/api/portfolio/user/${fakeUserId}/`)
-                            .set('Authorization', `Bearer ${loggedUserToken}`)
-
-                        expect(res.statusCode).toBe(401);
-                        expect(res.body.user).toBeUndefined();
-                    });
-                    test('for fake id', async () => {
-                        const fakeUserId = userId.toString().split('').reverse().join('');
-
-                        const res = await request(app)
-                            .get(`/api/portfolio/user/${fakeUserId}/`)
-                            .set('Authorization', `Bearer ${loggedUserToken}`)
-
-                        expect(res.statusCode).toBe(401);
-                        expect(res.body.user).toBeUndefined();
-                    });
-                    test('for unregistered user', async () => {
-                        
-                        const user = new mongoose.Types.ObjectId();
-                        
-                        const sampleUserToken = jwt.sign({
-                            email: "sampletest@gmail.com",
-                            userId: user.toString()
-                        },
-                            `${process.env.JWT_SECRET}`,
-                            { expiresIn: '1h' }
-                        );
-
-                        const res = await request(app)
-                            .get(`/api/portfolio/user/${user}/`)
-                            .set('Authorization', `Bearer ${sampleUserToken}`)
-
-                        expect(res.statusCode).toBe(404);
-                        expect(res.body.user).toBeUndefined();
-                    });
-                })
-            });
-            describe('If user is not authenticated', () => {
-                test('does not return user data', async () => {
-                    const res = await request(app)
-                        .get(`/api/portfolio/user/${userId}/`)
-                        .set('Authorization', `Bearer dummy-token`)
-
-                    expect(res.statusCode).toBe(401)
-                    expect(res.body.user).toBeUndefined();
-                })
-            })
-        })
 
         describe('ContactFormMessageTest', () => {
             afterAll(async () => {
