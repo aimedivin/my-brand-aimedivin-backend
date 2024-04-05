@@ -64,7 +64,7 @@ export class Portfolio {
             }
 
             const blogComments = await Comment.find({ blogId });
-            
+
             if (!blogComments.length) {
                 const error = new CustomError("Blog not found", 404);
                 throw error;
@@ -101,7 +101,7 @@ export class Portfolio {
                 throw error;
             }
 
-            const userName = await User.findById(userId, {name: 1});
+            const userName = await User.findById(userId, { name: 1 });
 
             blog.comments = (blog.comments ? blog.comments : 0) + 1;
             await blog.save();
@@ -133,6 +133,36 @@ export class Portfolio {
 
 
     //-------------------- Blog Like ------------------
+    getUserLike: RequestHandler = async (req, res) => {
+        try {
+            const blogId = req.params.blogId
+            const userId = req.userId;
+
+            if (!isValidObjectId(blogId)) {
+                return res.status(400).json({ message: "Invalid blog id" });
+            }
+            //Check if blog exist
+            const blog = await Blog.findById(blogId);
+            
+            if (!blog) {
+                const error = new CustomError("This blog does not exist", 404);
+                throw error;
+            }
+
+            const blogLike = await Like.findOne({ blogId, userId });
+            if (!blogLike) {
+                return res.status(404).json({ message: "The Like on this blog doesn't exist." })
+            }
+            return res.status(200).json({ message: 'Like on the blog exist.' })
+        } catch (err) {
+            if (err instanceof CustomError) {
+                res.status(err.statusCode).json({ message: err.message });
+            } else {
+                res.status(500).json({ message: "Server error: Adding like failed" });
+            }
+        }
+    }
+
     postLike: RequestHandler = async (req, res) => {
         try {
             const blogId = req.params.blogId
@@ -152,9 +182,11 @@ export class Portfolio {
             const blogLike = await Like.findOne({ blogId, userId });
             if (!blogLike) {
                 const newBlogLike = new Like({ blogId, userId })
-                newBlogLike.save();
+                await newBlogLike.save();
 
-                blog.likes = (blog.likes ? blog.likes : 0) + 1;
+                const blogLikeCount = await Like.find({ blogId });
+                
+                blog.likes = blogLikeCount.length;
                 blog.save();
 
                 return res.status(201)
@@ -192,8 +224,9 @@ export class Portfolio {
                 const error = new CustomError("Can't Remove Like which doesn't exist on this blog", 404);
                 throw error;
             }
+            const blogLikeCount = await Like.find({ blogId });
 
-            blog.likes = blog.likes! - 1;
+            blog.likes = blogLikeCount.length;
             blog.save();
 
             res.status(200)
@@ -204,37 +237,6 @@ export class Portfolio {
                 res.status(err.statusCode).json({ message: err.message });
             } else {
                 res.status(500).json({ message: "Server error: Adding like failed" });
-            }
-        }
-    }
-
-    // Fetching single user information
-
-    getUser: RequestHandler = async (req, res) => {
-        try {
-            const userIdParam = req.params.userId;
-            const userId = req.userId;
-            if (!isValidObjectId(userIdParam) || !isValidObjectId(userId)) {
-                return res.status(400).json({ message: "Invalid user id" });
-            }
-            if (userIdParam != userId) {
-                const error = new CustomError('Not authorized', 401);
-                throw error;
-            }
-
-            const user = await User.findById(userId, { password: 0 });
-            if (user) {
-                return res.status(200)
-                    .json({
-                        "Message": "Fetching User information was successful !",
-                        "user": user
-                    });
-            }
-        } catch (error) {
-            if (error instanceof CustomError) {
-                res.status(error.statusCode).json({ message: error.message });
-            } else {
-                res.status(500).json({ Error: "Server Error" });
             }
         }
     }

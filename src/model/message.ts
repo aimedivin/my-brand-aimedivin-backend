@@ -1,3 +1,4 @@
+import { timeStamp } from "console";
 import mongoose from "mongoose";
 
 const messageSchema = new mongoose.Schema({
@@ -13,7 +14,7 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: true
     }
-});
+}, { timestamps: true });
 
 
 const Message = mongoose.model("Messages", messageSchema);

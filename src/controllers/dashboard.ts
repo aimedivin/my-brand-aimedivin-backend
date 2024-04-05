@@ -60,11 +60,10 @@ export class Dashboard {
         }
     }
 
-    // Updating existing Blog
+    // Updating existing BlogData Validation Error
     updateBlog: RequestHandler = async (req, res) => {
         try {
             const blogId: string = req.params.blogId;
-
             if (!isValidObjectId(blogId)) {
                 return res.status(400).json({ message: "Invalid blog id" });
             }
@@ -78,7 +77,22 @@ export class Dashboard {
 
             const newTitle: string = req.body.title;
             const newDescription: string = req.body.description;
-            const newImageUrl: string = req.body.imageUrl;
+            let newImageUrl
+
+            if (!req.file) {
+                if (!req.body.newImageUrl) {
+                    const error = new CustomError('Unsupported Media Type.', 415);
+                    throw error;
+                }
+                newImageUrl = req.body.newImageUrl;
+
+            } else {
+                if (!req.file.path) {
+                    const error = new CustomError('Unsupported Media Type.', 415);
+                    throw error;
+                }
+                newImageUrl = req.file.path;
+            }
 
             // Check if provided details belong to another blog 
             const existingBlog = await Blog.findOne({
@@ -131,6 +145,7 @@ export class Dashboard {
     // Creating new blog
     postBlog: RequestHandler = async (req, res) => {
         try {
+
             const validationError = validationResult(req);
 
             if (!validationError.isEmpty()) {
@@ -138,7 +153,14 @@ export class Dashboard {
 
                 throw error;
             }
-            const { title, description, imageUrl } = req.body;
+            const { title, description } = req.body;
+
+            if (!req.file) {
+                const error = new CustomError('No image provided.', 415);
+                throw error;
+            }
+
+            const imageUrl = req.file.path;
 
             //Check if blog exist
             const existingBlog = await Blog.findOne({
@@ -146,8 +168,8 @@ export class Dashboard {
                     { title },
                     {
                         $or: [
-                            { description },
-                            { imageUrl }
+                            { description }
+                            // ,{ imageUrl }
                         ]
                     }
                 ]

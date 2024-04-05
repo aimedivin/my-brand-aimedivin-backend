@@ -36,6 +36,28 @@ function authorizationCheck(req: Request) {
 
 export const isAuth: RequestHandler = async (req, res, next) => {
     try {
+        const decodedToken = authorizationCheck(req);
+        req.userId = decodedToken.userId;
+
+        let user = await User.findById(decodedToken.userId);
+        if (!user) {
+            return res.status(404)
+                .json({
+                    message: "User not found"
+                });
+        }
+
+        next()
+    } catch (error) {
+        if ((error as Error).name === 'JsonWebTokenError' || (error as Error).name === 'TokenExpiredError') {
+            res.status(401).json({ message: 'You\'re not authorized' });
+        } else {
+            res.status(500).json({ message: "Server error" });
+        }
+    }
+}
+export const isUserAuth: RequestHandler = async (req, res, next) => {
+    try {
         const decodedToken = authorizationCheck(req)
         req.userId = decodedToken.userId;
 
@@ -66,7 +88,7 @@ export const isAuth: RequestHandler = async (req, res, next) => {
     }
 }
 
-export const isAuthAdmin: RequestHandler = async (req, res, next) => {
+export const isAdminAuth: RequestHandler = async (req, res, next) => {
 
     try {
         const decodedToken = authorizationCheck(req)
