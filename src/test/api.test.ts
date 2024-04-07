@@ -37,6 +37,7 @@ const userToken = () => {
     );
 }
 
+
 describe('APITest', () => {
     beforeAll(async () => {
         await mongoose.disconnect()
@@ -172,68 +173,77 @@ describe('APITest', () => {
                     const res = await request(app)
                         .put(`/api/auth/user/${userId}`)
                         .set('Authorization', `Bearer ${loggedUserToken}`)
-                        .send({
-                            name: 'user-name-updated',
-                            photo: 'photo-update',
-                            dob: 'dob-updated'
-                        })
+                        .field('name', 'user-name-updated')
+                        .field('dob', "dob-updated")
+                        .attach('photo', `${__dirname}/test-file/photo.png`);
 
                     expect(res.statusCode).toBe(200);
                     expect(res.body.UpdatedUser).toBeDefined();
                 });
-                test('Doesn\'t update user data, for incorrect syntax of _id submitted', async () => {
-                    const loggedUserToken = userToken();
-                    const fakeUserId = 'blog-123';
-                    const res = await request(app)
-                        .put(`/api/auth/user/${fakeUserId}`)
-                        .set('Authorization', `Bearer ${loggedUserToken}`)
-                        .send({
-                            name: 'user-name-updated',
-                            photo: 'photo-update',
-                            dob: 'dob-updated'
-                        });
+                describe("Doesn't update user data", () => {
 
-                    expect(res.statusCode).toBe(400);
-                    expect(res.body.UpdatedUser).toBeUndefined();
-                });
+                    test('for incorrect syntax of _id submitted', async () => {
+                        const loggedUserToken = userToken();
+                        const fakeUserId = 'blog-123';
+                        const res = await request(app)
+                            .put(`/api/auth/user/${fakeUserId}`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+                            .field('name', 'user-name-updated')
+                            .field('dob', "dob-updated")
+                            .attach('photo', `${__dirname}/test-file/photo.png`);
 
-                test("doesn't update user data, when encounters incorrect body data", async () => {
-                    const loggedUserToken = userToken();
+                        expect(res.statusCode).toBe(400);
+                        expect(res.body.UpdatedUser).toBeUndefined();
+                    });
 
-                    const res = await request(app)
-                        .put(`/api/auth/user/${userId}`)
-                        .set('Authorization', `Bearer ${loggedUserToken}`)
-                        .send({
-                            name: '',
-                            photo: 'photo-update',
-                            dob: 'dob-updated'
-                        });
+                    test("when encounters incorrect body data", async () => {
+                        const loggedUserToken = userToken();
 
-                    expect(res.statusCode).toBe(422);
-                    expect(res.body.UpdatedUser).toBeUndefined();
-                })
+                        const res = await request(app)
+                            .put(`/api/auth/user/${userId}`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+                            .field('name', '')
+                            .field('dob', "dob-updated")
+                            .attach('photo', `${__dirname}/test-file/photo.png`);
 
-                test("doesn't update user data, if JWTtoken don't belong to that user", async () => {
-                    const loggedUserToken = jwt.sign({
-                        email: "fake@gmail.com",
-                        userId: userId2.toString()
-                    },
-                        `${process.env.JWT_SECRET}`,
-                        { expiresIn: '1h' }
-                    );;
-                    const fakeBlogId = blogId.toString().split('').reverse().join('');
+                        expect(res.statusCode).toBe(422);
+                        expect(res.body.UpdatedUser).toBeUndefined();
+                    })
 
-                    const res = await request(app)
-                        .put(`/api/auth/user/${fakeBlogId}`)
-                        .set('Authorization', `Bearer ${loggedUserToken}`)
-                        .send({
-                            name: 'user-name-updated',
-                            photo: 'photo-update',
-                            dob: 'dob-updated'
-                        });
+                    test("when sent unsupported image type", async () => {
+                        const loggedUserToken = userToken();
 
-                    expect(res.statusCode).toBe(401);
-                    expect(res.body.UpdatedUser).toBeUndefined();
+                        const res = await request(app)
+                            .put(`/api/auth/user/${userId}`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+                            .field('name', 'updated-username')
+                            .field('dob', "dob-updated")
+                            .attach('photo', `${__dirname}/test-file/photo.webp`);
+
+                        expect(res.statusCode).toBe(415);
+                        expect(res.body.UpdatedUser).toBeUndefined();
+                    })
+
+                    test("if JWTtoken don't belong to that user", async () => {
+                        const loggedUserToken = jwt.sign({
+                            email: "fake@gmail.com",
+                            userId: userId2.toString()
+                        },
+                            `${process.env.JWT_SECRET}`,
+                            { expiresIn: '1h' }
+                        );;
+                        const fakeBlogId = blogId.toString().split('').reverse().join('');
+
+                        const res = await request(app)
+                            .put(`/api/auth/user/${fakeBlogId}`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+                            .field('name', 'user-name-updated')
+                            .field('dob', "dob-updated")
+                            .attach('photo', `${__dirname}/test-file/photo.png`);
+
+                        expect(res.statusCode).toBe(401);
+                        expect(res.body.UpdatedUser).toBeUndefined();
+                    })
                 })
             })
             describe('if user is not authenticated', () => {
@@ -283,7 +293,7 @@ describe('APITest', () => {
                             expect(res.statusCode).toBe(404);
                             expect(res.body.user).toBeUndefined();
                         });
-                        
+
                         test('for user who is not admin trying to get data for other users', async () => {
                             const res = await request(app)
                                 .get(`/api/auth/user/${userId2.toString()}/`)
@@ -291,7 +301,7 @@ describe('APITest', () => {
 
                             expect(res.statusCode).toBe(401);
                             expect(res.body.user).toBeUndefined();
-                            
+
                         });
 
                         test('for unregistered user', async () => {
@@ -325,6 +335,39 @@ describe('APITest', () => {
                         expect(res.body.user).toBeUndefined();
                     })
                 })
+            })
+        })
+
+        describe('Refresh access token test', () => {
+            let refreshToken: string;
+            beforeAll(async () => {
+                refreshToken = jwt.sign({
+                    email: "test@gmail.com",
+                    userId: userId.toString()
+                },
+                    `${process.env.JWT_REFRESH_SECRET}`
+                );
+            })
+            test('should return new access token', async () => {
+                const res = await request(app)
+                    .post(`/api/auth/token/${userId}`)
+                    .send({
+                        token: `${refreshToken}`
+                    })
+
+                expect(res.statusCode).toBe(200)
+                expect(res.body.token).toBeDefined();
+            })
+            test("Doesn't return new access token, for non-existing user", async () => {
+                const userId = new mongoose.Types.ObjectId()
+                const res = await request(app)
+                    .post(`/api/auth/token/${userId}`)
+                    .send({
+                        token: `${refreshToken}`
+                    })
+
+                expect(res.statusCode).toBe(401)
+                expect(res.body.token).toBeUndefined();
             })
         })
     })
@@ -399,7 +442,7 @@ describe('APITest', () => {
                         })
                     })
                     describe('If user is Authenticated but he/she is not Admin', () => {
-                        
+
                         test('should not return any blog', async () => {
                             const sampleUserToken = jwt.sign({
                                 email: "test2@gmail.com",
@@ -744,6 +787,29 @@ describe('APITest', () => {
                 })
             })
         })
+
+        describe('Comments Retrieval test', () => {
+            beforeAll(async () => {
+
+                await Comment.create(
+                    {
+                        creatorId: userId2,
+                        creatorName: "user2test",
+                        blogId: blogId,
+                        description: 'comment'
+                    }
+                )
+            })
+
+            test("should return comments", async () => {
+                const res = await request(app)
+                    .get('/api/dashboard/comments')
+                    .set("Authorization", `Bearer ${loggedAdminToken}`);
+
+                expect(res.statusCode).toBe(200)
+                expect(res.body.comments).toBeDefined()
+            })
+        });
     })
 
     // Portfolio Test
@@ -994,23 +1060,23 @@ describe('APITest', () => {
                         })
 
                         describe('Should Not Return Success Status Code', () => {
-                            
+
                             test('For incorrect syntax of blog Id', async () => {
                                 const fakeBlogId = 'blog-id-123';
                                 const res = await request(app)
                                     .get(`/api/portfolio/blog/${fakeBlogId}/like`)
                                     .set('Authorization', `Bearer ${loggedUserToken}`)
 
-                                    expect(res.statusCode).toBe(400)
+                                expect(res.statusCode).toBe(400)
                             });
                             test('For blog which does not exist', async () => {
                                 const fakeBlogId = new mongoose.Types.ObjectId();
-                                
+
                                 const res = await request(app)
                                     .get(`/api/portfolio/blog/${fakeBlogId.toString()}/like`)
                                     .set('Authorization', `Bearer ${loggedUserToken}`)
 
-                                    expect(res.statusCode).toBe(404)
+                                expect(res.statusCode).toBe(404)
                             });
                         })
                     })

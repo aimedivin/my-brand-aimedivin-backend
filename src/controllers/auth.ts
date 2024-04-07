@@ -1,6 +1,6 @@
 import { RequestHandler } from "express"
 import { validationResult } from 'express-validator'
-import jwt from 'jsonwebtoken'
+import jwt, { JwtPayload } from 'jsonwebtoken'
 import 'dotenv/config'
 import Joi, { ValidationError } from "joi"
 
@@ -92,11 +92,20 @@ export class Auth {
                 { expiresIn: '1h' }
             );
 
+            const refreshToken = jwt.sign({
+                email: user!.email,
+                userId: user!._id.toString()
+            },
+                `${process.env.JWT_REFRESH_SECRET}`
+            );
+
             res.status(200)
                 .json({
                     token: token,
+                    refreshToken: refreshToken,
                     userId: user._id.toString()
-                })
+                });
+
         } catch (err) {
             if (err instanceof CustomError) {
                 res.status(err.statusCode).json({ message: err.message });
@@ -108,8 +117,22 @@ export class Auth {
 
     updateUser: RequestHandler = async (req, res) => {
         try {
+            let photo;
+            if (!req.file) {
+                if (!req.body.photoUrl) {
+                    const error = new CustomError('Unsupported Media Type.', 415);
+                    throw error;
+                }
+                photo = req.body.photoUrl;
+            } else {
+                if (!req.file.path) {
+                    const error = new CustomError('Unsupported Media Type.', 415);
+                    throw error;
+                }
+                photo = req.file.path;
+            }
+
             const name = req.body.name;
-            const photo = req.body.photo;
             const dob = req.body.dob;
             const userIdParam = req.params.userId;
             const userId = req.userId;
@@ -157,6 +180,7 @@ export class Auth {
         try {
             const userIdParam = req.params.userId;
             const userId = req.userId;
+
             if (!isValidObjectId(userIdParam) || !isValidObjectId(userId)) {
                 return res.status(400).json({ message: "Invalid user id" });
             }
@@ -185,6 +209,42 @@ export class Auth {
                 res.status(error.statusCode).json({ message: error.message });
             } else {
                 res.status(500).json({ Error: "Server Error" });
+            }
+        }
+    }
+
+    accessTokenRefresh: RequestHandler = async (req, res) => {
+        try {
+            const userId = req.params.userId;
+            const refreshToken = req.body.token;
+            
+            const user = await User.findById(userId);
+
+            const decodedToken = jwt.verify(refreshToken, `${process.env.JWT_REFRESH_SECRET}`) as JwtPayload;
+            
+            if (!user || !(userId == decodedToken.userId)) {
+                const error = new CustomError('You\'re not authorized.', 401);
+                throw error;
+            }
+
+            const token = jwt.sign({
+                email: user!.email,
+                userId: user!._id.toString()
+            },
+                `${process.env.JWT_SECRET}`,
+                { expiresIn: '1h' }
+            );
+
+            res.status(200)
+                .json({
+                    token: token,
+                    userId: user!._id.toString()
+                })
+        } catch (error) {
+            if (error instanceof CustomError) {
+                res.status(error.statusCode).json({ message: error.message });
+            } else {
+                res.status(500).json({ message: "Server error" });
             }
         }
     }

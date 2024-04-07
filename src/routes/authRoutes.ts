@@ -42,8 +42,9 @@
  *             schema:
  *               type: object
  *             example:
- *               token: token
- *               userId: userId
+ *               token: string
+ *               refreshToken: string
+ *               userId: string
  * 
  *       401:
  *         description: Invalid credentials
@@ -212,6 +213,41 @@
  *         $ref: '#/components/responses/fourZeroOneAuth'
  *       500:
  *         $ref: '#/components/responses/serverError'
+ * /api/auth/token/{userId}:
+ *   post:
+ *     summary: Updates expires access token
+ *     tags: [Authorization]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: The id of user
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 token: string
+ *     responses:
+ *       200:
+ *         description: New access token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 userId:
+ *                   type: string
+ *       401:
+ *         $ref: '#/components/responses/fourZeroOneAuth'
+ *       500:
+ *         $ref: '#/components/responses/serverError'
  */
 
 import { Router } from 'express';
@@ -241,5 +277,8 @@ router.get("/user/:userId", isAuth, authController.getUser);
 
 // User login
 router.post('/login', authController.login);
+
+// Refresh Access Token
+router.post("/token/:userId", authController.accessTokenRefresh)
 
 export default router;

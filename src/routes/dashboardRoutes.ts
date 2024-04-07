@@ -292,6 +292,38 @@
  *         $ref: '#/components/responses/fourZeroOneAuth'
  *       500:
  *         $ref: '#/components/responses/serverError'
+ * /api/dashboard/comments:
+ *   get:
+ *     summary: Retrieves a all blog comments
+ *     tags: [Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Comment are successfully retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Comments fetched successfully!
+ *                 comments:
+ *                   type: array
+ *                   items:
+ *                     properties:
+ *                       username:
+ *                         type: string
+ *                       photo:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *         
+ *       401:
+ *         $ref: '#/components/responses/fourZeroOneAuth'
+ *       500:
+ *         $ref: '#/components/responses/serverError'
  */
 
 
@@ -338,5 +370,7 @@ router.get("/users", isAdminAuth, dashboardController.getUsers);
 router.get("/messages", isAdminAuth,dashboardController.getMessages);
 
 router.get("/messages/:msgId", isAdminAuth,dashboardController.getMessage);
+
+router.get("/comments", isAdminAuth,dashboardController.getComments);
 
 export default router;
