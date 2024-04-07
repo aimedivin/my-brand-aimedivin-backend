@@ -16,6 +16,20 @@ export class CustomError {
     }
 }
 
+interface CommentData {
+    username: string;
+    photo: string;
+    description: string;
+}
+
+interface Comment {
+    creatorId: Types.ObjectId;
+    creatorName: string;
+    blogId: Types.ObjectId;
+    description: string;
+}
+
+
 export class Dashboard {
     // Fetching All blogs
     getBlogs: RequestHandler = async (req, res) => {
@@ -79,20 +93,16 @@ export class Dashboard {
             const newDescription: string = req.body.description;
             let newImageUrl
 
-            if (!req.file) {
+            if (req.file && req.file.path) {
+                newImageUrl = req.file.path;
+            } else {
                 if (!req.body.newImageUrl) {
                     const error = new CustomError('Unsupported Media Type.', 415);
                     throw error;
                 }
                 newImageUrl = req.body.newImageUrl;
-
-            } else {
-                if (!req.file.path) {
-                    const error = new CustomError('Unsupported Media Type.', 415);
-                    throw error;
-                }
-                newImageUrl = req.file.path;
             }
+
 
             // Check if provided details belong to another blog 
             const existingBlog = await Blog.findOne({
@@ -296,6 +306,38 @@ export class Dashboard {
                 .json(
                     { message: "Server error" }
                 )
+        }
+    }
+    getComments: RequestHandler = async (req, res) => {
+        try {
+            const comments = await Comment.find();
+
+            let commentsData: CommentData[] = [];
+            comments.reverse();
+
+            Promise.all(comments.map(async (comment) => {
+                const user = await User.findById(comment.creatorId);
+                if (user) {
+                    commentsData.push({
+                        username: user.name,
+                        photo: user.photo,
+                        description: comment.description
+                    });
+                }
+            })).then(() => {
+
+                res.status(200)
+                    .json({
+                        message: 'Comments fetched successfully!',
+                        comments: commentsData
+                    });
+            })
+
+        } catch (err) {
+            res.status(500)
+                .json({
+                    "message": "Internal server error"
+                })
         }
     }
 }
