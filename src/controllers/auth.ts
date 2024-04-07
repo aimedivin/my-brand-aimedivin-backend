@@ -118,19 +118,16 @@ export class Auth {
     updateUser: RequestHandler = async (req, res) => {
         try {
             let photo;
-            if (!req.file) {
+            if (req.file && req.file.path) {
+                photo = req.file.path;
+            }
+            else {
                 if (!req.body.photoUrl) {
                     const error = new CustomError('Unsupported Media Type.', 415);
                     throw error;
                 }
                 photo = req.body.photoUrl;
-            } else {
-                if (!req.file.path) {
-                    const error = new CustomError('Unsupported Media Type.', 415);
-                    throw error;
-                }
-                photo = req.file.path;
-            }
+            } 
 
             const name = req.body.name;
             const dob = req.body.dob;

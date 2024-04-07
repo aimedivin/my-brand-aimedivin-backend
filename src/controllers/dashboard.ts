@@ -93,20 +93,16 @@ export class Dashboard {
             const newDescription: string = req.body.description;
             let newImageUrl
 
-            if (!req.file) {
+            if (req.file && req.file.path) {
+                newImageUrl = req.file.path;
+            } else {
                 if (!req.body.newImageUrl) {
                     const error = new CustomError('Unsupported Media Type.', 415);
                     throw error;
                 }
                 newImageUrl = req.body.newImageUrl;
-
-            } else {
-                if (!req.file.path) {
-                    const error = new CustomError('Unsupported Media Type.', 415);
-                    throw error;
-                }
-                newImageUrl = req.file.path;
             }
+
 
             // Check if provided details belong to another blog 
             const existingBlog = await Blog.findOne({
@@ -315,7 +311,7 @@ export class Dashboard {
     getComments: RequestHandler = async (req, res) => {
         try {
             const comments = await Comment.find();
-            
+
             let commentsData: CommentData[] = [];
             comments.reverse();
 

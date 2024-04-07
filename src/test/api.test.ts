@@ -168,18 +168,34 @@ describe('APITest', () => {
 
         describe('User information update test', () => {
             describe('If user is authenticated', () => {
-                test('should update user data', async () => {
-                    const loggedUserToken = userToken();
-                    const res = await request(app)
-                        .put(`/api/auth/user/${userId}`)
-                        .set('Authorization', `Bearer ${loggedUserToken}`)
-                        .field('name', 'user-name-updated')
-                        .field('dob', "dob-updated")
-                        .attach('photo', `${__dirname}/test-file/photo.png`);
+                describe('Should update user data', () => {
+                    test('If user uploaded new image', async () => {
+                        const loggedUserToken = userToken();
+                        const res = await request(app)
+                            .put(`/api/auth/user/${userId}`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+                            .field('name', 'user-name-updated')
+                            .field('dob', "dob-updated")
+                            .attach('photo', `${__dirname}/test-file/photo.png`);
 
-                    expect(res.statusCode).toBe(200);
-                    expect(res.body.UpdatedUser).toBeDefined();
-                });
+                        expect(res.statusCode).toBe(200);
+                        expect(res.body.UpdatedUser).toBeDefined();
+                    });
+                    test("don't upload new image", async () => {
+                        const loggedUserToken = userToken();
+                        const res = await request(app)
+                            .put(`/api/auth/user/${userId}`)
+                            .set('Authorization', `Bearer ${loggedUserToken}`)
+                            .send({
+                                name: 'user-name-updated',
+                                dob: "dob-updated",
+                                photoUrl: `test-file/photo.png`
+                            })
+
+                        expect(res.statusCode).toBe(200);
+                        expect(res.body.UpdatedUser).toBeDefined();
+                    })
+                })
                 describe("Doesn't update user data", () => {
 
                     test('for incorrect syntax of _id submitted', async () => {
